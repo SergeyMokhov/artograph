@@ -124,20 +124,31 @@ step(cornerCount === 4, 'open tilt panel', `${cornerCount} corner handles shown`
 const stageTransform = () => page.$eval('#stage', (el) => el.style.transform);
 const t0 = await stageTransform();
 
-// Corner drag: pull the top-left corner inward and check layer follows
-const cRect = await page.$eval('#corners .corner', (el) => el.getBoundingClientRect().toJSON());
+// All four corner pins must start fully inside the viewport
+const vw = 1280;
+const vh = 800;
+const pinRects = await page.$$eval('#corners .corner', (els) => els.map((el) => el.getBoundingClientRect().toJSON()));
+const allVisible = pinRects.every((p) => p.x >= 0 && p.y >= 0 && p.x + p.width <= vw && p.y + p.height <= vh);
+step(allVisible, 'corner pins start fully visible', pinRects.map((p) => `(${p.x | 0},${p.y | 0})`).join(' '));
+
+// Corner drag (delta-based): pull the top-left pin inward, layer must follow
+const cRect = pinRects[0];
+const pin0 = { x: cRect.x + cRect.width / 2, y: cRect.y + cRect.height / 2 };
 const layerBefore = await page.$eval('.layer', (el) => el.getBoundingClientRect().toJSON());
-await page.mouse.move(cRect.x + cRect.width / 2, cRect.y + cRect.height / 2);
+await page.mouse.move(pin0.x, pin0.y);
 await page.mouse.down();
-await page.mouse.move(cRect.x + 120, cRect.y + 80, { steps: 8 });
+await page.mouse.move(pin0.x + 120, pin0.y + 80, { steps: 8 });
 await page.mouse.up();
 await sleep(100);
 const t2 = await stageTransform();
 const layerAfter = await page.$eval('.layer', (el) => el.getBoundingClientRect().toJSON());
 const cornerAfter = await page.$eval('#corners .corner', (el) => el.getBoundingClientRect().toJSON());
-const cornerMoved = Math.abs(cornerAfter.x - cRect.x - 120 + cRect.width / 2) < 6;
+// True corner was at (0,0); after a (120,80) pointer delta it sits at (120,80),
+// which is inside the clamp margin, so the handle should be centered there.
+const cAfter = { x: cornerAfter.x + cornerAfter.width / 2, y: cornerAfter.y + cornerAfter.height / 2 };
+const cornerMoved = Math.abs(cAfter.x - 120) < 4 && Math.abs(cAfter.y - 80) < 4;
 const layerMoved = layerBefore.x !== layerAfter.x || layerBefore.width !== layerAfter.width;
-step(t2 !== t0 && cornerMoved && layerMoved, 'corner-pin drag', `corner followed pointer=${cornerMoved}; layer rect ${layerBefore.x | 0},${layerBefore.y | 0},${layerBefore.width | 0} -> ${layerAfter.x | 0},${layerAfter.y | 0},${layerAfter.width | 0}`);
+step(t2 !== t0 && cornerMoved && layerMoved, 'corner-pin drag', `pin center at (${cAfter.x.toFixed(1)},${cAfter.y.toFixed(1)}), expected (120,80); layer rect ${layerBefore.x | 0},${layerBefore.y | 0},${layerBefore.width | 0} -> ${layerAfter.x | 0},${layerAfter.y | 0},${layerAfter.width | 0}`);
 await shot('05-corner-pin');
 
 // Slider: focus the Y-tilt range and press arrow keys (native range behavior)

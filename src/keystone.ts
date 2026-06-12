@@ -62,9 +62,12 @@ export function applyKeystone(): void {
   H = homography(baseCorners(w, h), dst);
   Hinv = adjugate(H);
   stageEl.style.transform = toMatrix3d(H);
+  // Keep the handles fully visible and grabbable even when the true corner
+  // sits at (or beyond) the window edge.
+  const M = 16;
   cornerEls.forEach((el, i) => {
-    el.style.left = `${dst[i].x}px`;
-    el.style.top = `${dst[i].y}px`;
+    el.style.left = `${Math.min(Math.max(dst[i].x, M), w - M)}px`;
+    el.style.top = `${Math.min(Math.max(dst[i].y, M), h - M)}px`;
   });
   syncSliders(ks);
 }
@@ -112,14 +115,21 @@ export function initKeystone(): void {
 function beginCornerDrag(e: PointerEvent, i: number): void {
   e.preventDefault();
   e.stopPropagation();
+  const ks = app.project?.keystone;
+  if (!ks) return;
+  const startX = e.clientX;
+  const startY = e.clientY;
+  const orig = { ...ks.offsets[i] };
+  // Delta-based drag: the handle's displayed position is clamped into the
+  // window, so the corner moves by the pointer's movement rather than
+  // jumping to the pointer's absolute position.
   const onMove = (ev: PointerEvent) => {
-    const ks = app.project?.keystone;
-    if (!ks) return;
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const proj = projectedCorners(ks, w, h)[i];
-    // Offset chosen so the final corner lands exactly under the pointer.
-    ks.offsets[i] = { x: (ev.clientX - proj.x) / w, y: (ev.clientY - proj.y) / h };
+    ks.offsets[i] = {
+      x: orig.x + (ev.clientX - startX) / w,
+      y: orig.y + (ev.clientY - startY) / h,
+    };
     mutate();
   };
   const onUp = () => {
