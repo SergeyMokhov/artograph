@@ -1,6 +1,7 @@
 import { screenToStage } from './keystone';
 import { app, mutate } from './state';
 import { getImageBlob, saveImageBlob } from './store';
+import { toast } from './toast';
 import type { Layer, Pt } from './types';
 
 const layersEl = document.getElementById('layers') as HTMLElement;
@@ -73,6 +74,7 @@ export function renderStage(): void {
     // Counter-scale so selection chrome keeps a constant on-screen size.
     el.style.setProperty('--k', String(1 / layer.scale));
     el.classList.toggle('selected', layer.id === app.selectedId);
+    el.classList.toggle('locked', layer.locked === true);
   }
 }
 
@@ -103,6 +105,7 @@ export async function addImageFiles(files: Iterable<File>, at?: Pt): Promise<voi
       rotation: 0,
       z: nextZ(),
       opacity: 1,
+      locked: false,
     };
     project.layers.push(layer);
     app.selectedId = layer.id;
@@ -113,9 +116,22 @@ export async function addImageFiles(files: Iterable<File>, at?: Pt): Promise<voi
 
 export function deleteSelected(): void {
   const project = app.project;
-  if (!project || app.selectedId === null) return;
-  project.layers = project.layers.filter((l) => l.id !== app.selectedId);
+  const layer = selectedLayer();
+  if (!project || !layer) return;
+  if (layer.locked) {
+    toast('Image is frozen in place — press L to unfreeze it first');
+    return;
+  }
+  project.layers = project.layers.filter((l) => l.id !== layer.id);
   app.selectedId = null;
+  mutate();
+}
+
+export function toggleLockSelected(): void {
+  const layer = selectedLayer();
+  if (!layer) return;
+  layer.locked = !layer.locked;
+  toast(layer.locked ? 'Image frozen in place — press L to unfreeze' : 'Image unfrozen');
   mutate();
 }
 
@@ -134,7 +150,7 @@ export function reorderSelected(dir: 1 | -1): void {
 
 export function nudgeSelected(dx: number, dy: number): void {
   const layer = selectedLayer();
-  if (!layer) return;
+  if (!layer || layer.locked) return;
   layer.x += dx;
   layer.y += dy;
   mutate();

@@ -44,6 +44,23 @@ body {
   outline: calc(1.5px * var(--k, 1)) solid #3b82f6;
 }
 
+/* Frozen-in-place layers: amber dashed outline, no handles, no move cursor. */
+.layer.locked {
+  cursor: default;
+}
+
+.layer.locked.selected img {
+  outline: calc(1.5px * var(--k, 1)) dashed #f59e0b;
+}
+
+.layer.locked .handles {
+  display: none !important;
+}
+
+#btn-lock.active {
+  background: rgb(245 158 11 / 45%);
+}
+
 /* Selection handles: counter-scaled via --k so they stay a constant
    on-screen size regardless of the layer's zoom. */
 .layer .handles {

@@ -1,5 +1,5 @@
 import { screenToStage } from './keystone';
-import { addImageFiles, deleteSelected, nudgeSelected, reorderSelected, selectedLayer } from './stage';
+import { addImageFiles, deleteSelected, nudgeSelected, reorderSelected, selectedLayer, toggleLockSelected } from './stage';
 import { app, mutate } from './state';
 import type { Layer, Pt } from './types';
 
@@ -26,12 +26,19 @@ function onPointerDown(e: PointerEvent): void {
   const target = e.target as HTMLElement;
   if (target.closest('#ui, #picker')) return;
 
+  // preventDefault below suppresses the browser's default focus transfer, so
+  // explicitly release focus from any UI control (e.g. a tilt slider) —
+  // otherwise it keeps eating keyboard shortcuts and arrow keys.
+  if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body) {
+    document.activeElement.blur();
+  }
+
   const handle = target.closest<HTMLElement>('[data-handle]')?.dataset.handle;
   const layer = layerFromEl(target);
 
   if (handle && app.selectedId !== null) {
     const sel = selectedLayer();
-    if (!sel) return;
+    if (!sel || sel.locked) return;
     const p = pointerPt(e);
     const center = { x: sel.x, y: sel.y };
     if (handle === 'rotate') {
@@ -51,8 +58,10 @@ function onPointerDown(e: PointerEvent): void {
     }
   } else if (layer) {
     app.selectedId = layer.id;
-    const p = pointerPt(e);
-    drag = { kind: 'move', layer, start: p, origX: layer.x, origY: layer.y };
+    if (!layer.locked) {
+      const p = pointerPt(e);
+      drag = { kind: 'move', layer, start: p, origX: layer.x, origY: layer.y };
+    }
     mutate();
   } else {
     app.selectedId = null;
@@ -89,7 +98,7 @@ function onPointerMove(e: PointerEvent): void {
 function onWheel(e: WheelEvent): void {
   if (!app.project || (e.target as HTMLElement).closest('#ui, #picker')) return;
   const layer = layerFromEl(e.target as Element) ?? selectedLayer();
-  if (!layer) return;
+  if (!layer || layer.locked) return;
   e.preventDefault();
   const factor = Math.exp(-e.deltaY * 0.0015);
   const newScale = clamp(layer.scale * factor, 0.02, 50);
@@ -144,6 +153,10 @@ function onKeyDown(e: KeyboardEvent): void {
     case 't':
     case 'T':
       document.getElementById('btn-tilt')?.click();
+      break;
+    case 'l':
+    case 'L':
+      toggleLockSelected();
       break;
     default:
       return;

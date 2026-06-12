@@ -2,9 +2,10 @@ import './style.css';
 import { exportProject, importProject } from './export';
 import { initInteractions } from './interactions';
 import { applyKeystone, initKeystone, toggleCalibrate } from './keystone';
-import { addImageFiles, deleteSelected, releaseImageURLs, renderStage, reorderSelected, selectedLayer } from './stage';
+import { addImageFiles, deleteSelected, releaseImageURLs, renderStage, reorderSelected, selectedLayer, toggleLockSelected } from './stage';
 import { app, mutate, subscribe } from './state';
 import { deleteProject, listProjects, saveProject } from './store';
+import { errMsg, toast } from './toast';
 import { newProject, type ProjectDoc } from './types';
 
 const $ = <T extends HTMLElement>(sel: string): T => {
@@ -12,24 +13,6 @@ const $ = <T extends HTMLElement>(sel: string): T => {
   if (!el) throw new Error(`missing element ${sel}`);
   return el;
 };
-
-// ---------------------------------------------------------------------------
-// Toast: feedback that can't be missed, for saves and errors.
-
-const toastEl = document.createElement('div');
-toastEl.id = 'toast';
-document.body.append(toastEl);
-let toastTimer: ReturnType<typeof setTimeout> | undefined;
-
-function toast(msg: string, isError = false): void {
-  toastEl.textContent = msg;
-  toastEl.classList.toggle('error', isError);
-  toastEl.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.remove('show'), isError ? 5000 : 1800);
-}
-
-const errMsg = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
 // ---------------------------------------------------------------------------
 // Autosave: debounced on every mutation, flushed when the tab goes hidden.
@@ -138,7 +121,13 @@ function updateToolbar(): void {
   $('#project-name').textContent = app.project?.name ?? '';
   const sel = selectedLayer();
   $('#sel-controls').hidden = !sel;
-  if (sel) $<HTMLInputElement>('#sel-opacity').value = String(sel.opacity);
+  if (sel) {
+    $<HTMLInputElement>('#sel-opacity').value = String(sel.opacity);
+    const lockBtn = $<HTMLButtonElement>('#btn-lock');
+    lockBtn.textContent = sel.locked ? '🔒' : '🔓';
+    lockBtn.title = sel.locked ? 'Unfreeze image (L)' : 'Freeze image in place (L)';
+    lockBtn.classList.toggle('active', sel.locked === true);
+  }
 }
 
 function initToolbar(): void {
@@ -149,14 +138,14 @@ function initToolbar(): void {
     fileInput.value = '';
   });
 
-  const freezeBtn = $<HTMLButtonElement>('#btn-freeze');
-  freezeBtn.addEventListener('click', () => {
+  const saveBtn = $<HTMLButtonElement>('#btn-save');
+  saveBtn.addEventListener('click', () => {
     flushSave().then(
       () => {
-        toast(`Frozen — "${app.project?.name ?? 'project'}" saved ✓`);
-        freezeBtn.textContent = 'Frozen ✓';
+        toast(`"${app.project?.name ?? 'Project'}" saved ✓`);
+        saveBtn.textContent = 'Saved ✓';
         setTimeout(() => {
-          freezeBtn.textContent = 'Freeze';
+          saveBtn.textContent = 'Save';
         }, 1200);
       },
       (err: unknown) => toast(`Save failed: ${errMsg(err)}`, true),
@@ -187,6 +176,7 @@ function initToolbar(): void {
     sel.opacity = parseFloat((e.target as HTMLInputElement).value);
     mutate();
   });
+  $('#btn-lock').addEventListener('click', toggleLockSelected);
   $('#btn-del').addEventListener('click', deleteSelected);
   $('#btn-front').addEventListener('click', () => reorderSelected(1));
   $('#btn-back').addEventListener('click', () => reorderSelected(-1));

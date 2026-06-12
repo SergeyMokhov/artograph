@@ -162,11 +162,30 @@ const snapshot = () =>
       z: el.style.zIndex,
     })),
   }));
+// Lock: freeze the layer in place, try to drag it, then unfreeze.
+// Click the layer first: focus is still on the tilt slider, and shortcuts
+// are (correctly) ignored while an input is focused.
+const preLockRect = await page.$eval('.layer', (el) => el.getBoundingClientRect().toJSON());
+await page.mouse.click(preLockRect.x + preLockRect.width / 2, preLockRect.y + preLockRect.height / 2);
+await page.keyboard.press('l');
+await sleep(100);
+const lockedRect = await page.$eval('.layer', (el) => el.getBoundingClientRect().toJSON());
+await page.mouse.move(lockedRect.x + lockedRect.width / 2, lockedRect.y + lockedRect.height / 2);
+await page.mouse.down();
+await page.mouse.move(lockedRect.x + lockedRect.width / 2 + 150, lockedRect.y + lockedRect.height / 2 + 80, { steps: 8 });
+await page.mouse.up();
+const afterDragRect = await page.$eval('.layer', (el) => el.getBoundingClientRect().toJSON());
+const stayedPut = lockedRect.x === afterDragRect.x && lockedRect.y === afterDragRect.y;
+const lockIcon = await page.$eval('#btn-lock', (el) => el.textContent);
+step(stayedPut && lockIcon === '🔒', 'freeze image in place (L) blocks dragging', `drag attempt moved it ${afterDragRect.x - lockedRect.x},${afterDragRect.y - lockedRect.y}px; lock button shows ${lockIcon}`);
+await page.keyboard.press('l'); // unfreeze for the rest of the run
+await sleep(100);
+
 const before = await snapshot();
 
-await page.click('#btn-freeze');
-await page.waitForFunction(() => document.getElementById('btn-freeze').textContent === 'Frozen ✓');
-step(true, 'freeze', 'button flashed "Frozen ✓"');
+await page.click('#btn-save');
+await page.waitForFunction(() => document.getElementById('btn-save').textContent === 'Saved ✓');
+step(true, 'save', 'button flashed "Saved ✓"');
 
 await page.reload({ waitUntil: 'networkidle0' });
 await page.waitForSelector('#project-list .name');

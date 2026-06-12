@@ -16,6 +16,8 @@ export interface Layer {
   z: number;
   /** 0..1 */
   opacity: number;
+  /** Frozen in place: geometry (move/scale/rotate) and deletion are blocked. */
+  locked: boolean;
 }
 
 export interface KeystoneState {
