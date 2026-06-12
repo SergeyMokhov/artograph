@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Artograph</title>
+  </head>
+  <body>
+    <div id="stage">
+      <div id="layers"></div>
+      <div id="grid" hidden></div>
+    </div>
+
+    <div id="ui">
+      <div id="toolbar">
+        <span id="project-name"></span>
+        <button id="btn-add" title="Add images — or drop / paste them anywhere">+ Images</button>
+        <button id="btn-freeze" title="Save the project state">Freeze</button>
+        <button id="btn-tilt" title="Keystone / tilt correction (T)">Tilt</button>
+        <button id="btn-grid" title="Calibration grid (G)">Grid</button>
+        <button id="btn-full" title="Fullscreen (F)">Fullscreen</button>
+        <button id="btn-export" title="Export project as a portable file">Export</button>
+        <button id="btn-projects" title="Back to the project list">Projects</button>
+        <span id="sel-controls" hidden>
+          <label title="Layer opacity">◐ <input id="sel-opacity" type="range" min="0.05" max="1" step="0.05" /></label>
+          <button id="btn-back" title="Send backward ([)">▼</button>
+          <button id="btn-front" title="Bring forward (])">▲</button>
+          <button id="btn-del" title="Delete layer (Del)">✕</button>
+        </span>
+      </div>
+
+      <div id="keystone-panel" hidden>
+        <h3>Tilt correction</h3>
+        <p class="hint">Drag the ◆ corners to pin the projection onto the canvas, or fine-tune below. Turn on the Grid and adjust until its squares look square on the surface.</p>
+        <label>Tilt ↕ <input id="ks-rotX" type="range" min="-60" max="60" step="0.2" value="0" /></label>
+        <label>Tilt ↔ <input id="ks-rotY" type="range" min="-60" max="60" step="0.2" value="0" /></label>
+        <label>Rotate <input id="ks-rotZ" type="range" min="-45" max="45" step="0.2" value="0" /></label>
+        <label>Depth <input id="ks-persp" type="range" min="300" max="5000" step="10" value="1500" /></label>
+        <button id="ks-reset">Reset</button>
+      </div>
+
+      <div id="corners" hidden></div>
+    </div>
+
+    <div id="picker">
+      <div id="picker-card">
+        <h1>Artograph</h1>
+        <ul id="project-list"></ul>
+        <div class="row">
+          <button id="btn-new">New project</button>
+          <button id="btn-import">Import .artograph</button>
+        </div>
+      </div>
+    </div>
+
+    <input id="file-input" type="file" accept="image/*" multiple hidden />
+    <input id="import-input" type="file" accept=".artograph,application/json" hidden />
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

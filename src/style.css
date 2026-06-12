@@ -1,0 +1,348 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #fff;
+}
+
+body {
+  font: 14px/1.4 system-ui, sans-serif;
+}
+
+/* --------------------------------------------------------------- stage */
+
+#stage {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  transform-origin: 0 0;
+}
+
+#layers {
+  position: absolute;
+  inset: 0;
+}
+
+.layer {
+  position: absolute;
+  user-select: none;
+  touch-action: none;
+  cursor: move;
+}
+
+.layer img {
+  display: block;
+  -webkit-user-drag: none;
+}
+
+.layer.selected img {
+  outline: calc(1.5px * var(--k, 1)) solid #3b82f6;
+}
+
+/* Selection handles: counter-scaled via --k so they stay a constant
+   on-screen size regardless of the layer's zoom. */
+.layer .handles {
+  display: none;
+}
+
+.layer.selected .handles {
+  display: block;
+}
+
+.handle,
+.rot-handle {
+  position: absolute;
+  width: calc(14px * var(--k, 1));
+  height: calc(14px * var(--k, 1));
+  background: #fff;
+  border: calc(1.5px * var(--k, 1)) solid #3b82f6;
+  border-radius: 3px;
+}
+
+.handle.tl { top: 0;    left: 0;    transform: translate(-50%, -50%); cursor: nwse-resize; }
+.handle.tr { top: 0;    left: 100%; transform: translate(-50%, -50%); cursor: nesw-resize; }
+.handle.br { top: 100%; left: 100%; transform: translate(-50%, -50%); cursor: nwse-resize; }
+.handle.bl { top: 100%; left: 0;    transform: translate(-50%, -50%); cursor: nesw-resize; }
+
+.rot-handle {
+  top: calc(-28px * var(--k, 1));
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  cursor: grab;
+}
+
+/* ---------------------------------------------------------------- grid */
+
+#grid {
+  position: absolute;
+  inset: 0;
+  z-index: 100000;
+  pointer-events: none;
+  border: 2px solid #e11;
+  background-image:
+    linear-gradient(#e11 0 0),
+    linear-gradient(#e11 0 0),
+    repeating-linear-gradient(0deg, rgb(80 80 80 / 35%) 0 1px, transparent 1px 100px),
+    repeating-linear-gradient(90deg, rgb(80 80 80 / 35%) 0 1px, transparent 1px 100px);
+  background-size: 100% 2px, 2px 100%, 100% 100%, 100% 100%;
+  background-position: 0 50%, 50% 0, 0 0, 0 0;
+  background-repeat: no-repeat, no-repeat, repeat, repeat;
+}
+
+/* ------------------------------------------------------------------ ui */
+
+#ui {
+  position: fixed;
+  inset: 0;
+  z-index: 200000;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+#ui > * {
+  pointer-events: auto;
+}
+
+body:not(.editing) #ui {
+  display: none;
+}
+
+#toolbar {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgb(20 20 24 / 82%);
+  color: #fff;
+  backdrop-filter: blur(6px);
+  white-space: nowrap;
+}
+
+#project-name {
+  font-weight: 600;
+  margin-right: 6px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#sel-controls {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding-left: 8px;
+  border-left: 1px solid rgb(255 255 255 / 25%);
+}
+
+#sel-controls[hidden] {
+  display: none;
+}
+
+#sel-controls input[type='range'] {
+  width: 90px;
+}
+
+button {
+  font: inherit;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 7px;
+  background: rgb(255 255 255 / 12%);
+  color: inherit;
+  cursor: pointer;
+}
+
+button:hover {
+  background: rgb(255 255 255 / 24%);
+}
+
+#keystone-panel {
+  position: absolute;
+  top: 64px;
+  right: 12px;
+  width: 260px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgb(20 20 24 / 82%);
+  color: #eee;
+  backdrop-filter: blur(6px);
+}
+
+#keystone-panel h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+#keystone-panel .hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #bbb;
+}
+
+#keystone-panel label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 7px 0;
+}
+
+#keystone-panel input[type='range'] {
+  width: 160px;
+}
+
+.corner {
+  position: fixed;
+  width: 18px;
+  height: 18px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: #3b82f6;
+  border: 2px solid #fff;
+  box-shadow: 0 0 5px rgb(0 0 0 / 50%);
+  cursor: move;
+}
+
+/* -------------------------------------------------- projection (idle) */
+
+body.idle {
+  cursor: none;
+}
+
+body.idle #ui {
+  opacity: 0;
+  pointer-events: none !important;
+}
+
+body.idle #ui > * {
+  pointer-events: none;
+}
+
+body.idle .layer.selected img {
+  outline: none;
+}
+
+body.idle .layer.selected .handles {
+  display: none;
+}
+
+/* --------------------------------------------------------------- toast */
+
+#toast {
+  position: fixed;
+  top: 56px;
+  left: 50%;
+  transform: translate(-50%, -8px);
+  z-index: 400000;
+  padding: 9px 18px;
+  border-radius: 9px;
+  background: #16a34a;
+  color: #fff;
+  font: 14px/1.4 system-ui, sans-serif;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+#toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+#toast.error {
+  background: #dc2626;
+}
+
+/* -------------------------------------------------------------- picker */
+
+#picker {
+  position: fixed;
+  inset: 0;
+  z-index: 300000;
+  display: grid;
+  place-items: center;
+  background: #f5f5f4;
+}
+
+body.editing #picker {
+  display: none;
+}
+
+#picker-card {
+  min-width: 440px;
+  max-width: 90vw;
+  padding: 28px 32px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 10px 40px rgb(0 0 0 / 12%);
+}
+
+#picker-card h1 {
+  margin: 0 0 14px;
+  font-size: 24px;
+}
+
+#picker-card button {
+  background: #ececf0;
+  color: #222;
+}
+
+#picker-card button:hover {
+  background: #dfdfe6;
+}
+
+#picker-card .row {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+#picker-card .row button {
+  padding: 8px 14px;
+}
+
+#project-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 50vh;
+  overflow: auto;
+}
+
+#project-list li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 4px;
+  border-bottom: 1px solid #eee;
+}
+
+#project-list li.empty {
+  color: #999;
+}
+
+#project-list .name {
+  flex: 1;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#project-list .name:hover {
+  color: #3b82f6;
+}
+
+#project-list .date {
+  font-size: 12px;
+  color: #999;
+}

@@ -1,0 +1,239 @@
+import fs from 'node:fs';
+import puppeteer from 'puppeteer-core';
+
+const OUT = '/tmp/artograph-verify';
+fs.mkdirSync(OUT, { recursive: true });
+
+const results = [];
+const step = (ok, what, observed) => {
+  results.push({ ok, what, observed });
+  console.log(`${ok ? 'OK ' : 'FAIL'} | ${what} | ${observed}`);
+};
+
+const browser = await puppeteer.launch({
+  browser: 'firefox',
+  executablePath: '/usr/bin/firefox',
+  headless: true,
+});
+const page = await browser.newPage();
+await page.setViewport({ width: 1280, height: 800 });
+page.on('pageerror', (e) => console.log('[pageerror]', e.message));
+page.on('console', (m) => {
+  if (m.type() === 'error') console.log('[console.error]', m.text());
+});
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const shot = (name) => page.screenshot({ path: `${OUT}/${name}.png` });
+
+// ---- 1. Picker appears, create a project --------------------------------
+await page.goto('http://localhost:5173/', { waitUntil: 'networkidle0' });
+await page.waitForSelector('#picker');
+const pickerShown = await page.$eval('#picker', (el) => getComputedStyle(el).display !== 'none');
+await shot('01-picker');
+step(pickerShown, 'open app', `picker visible=${pickerShown}`);
+
+page.once('dialog', (d) => d.accept('Mural test'));
+await page.click('#btn-new');
+await page.waitForSelector('body.editing');
+const projName = await page.$eval('#project-name', (el) => el.textContent);
+step(projName === 'Mural test', 'create project via prompt', `toolbar shows "${projName}"`);
+
+// ---- 2. Add an image, drag it, wheel-scale it ----------------------------
+const dataURL = await page.evaluate(() => {
+  const c = document.createElement('canvas');
+  c.width = 400;
+  c.height = 300;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#16a34a';
+  ctx.fillRect(0, 0, 400, 300);
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(200, 150, 100, 0, 7);
+  ctx.fill();
+  ctx.fillStyle = '#dc2626';
+  ctx.fillRect(180, 40, 40, 220);
+  ctx.fillStyle = '#000';
+  ctx.font = 'bold 40px sans-serif';
+  ctx.fillText('REF', 20, 50);
+  return c.toDataURL('image/png');
+});
+fs.writeFileSync(`${OUT}/test-image.png`, Buffer.from(dataURL.split(',')[1], 'base64'));
+
+let uploadedVia = 'uploadFile';
+try {
+  const input = await page.$('#file-input');
+  await input.uploadFile(`${OUT}/test-image.png`);
+} catch (e) {
+  uploadedVia = `in-page DataTransfer (uploadFile failed: ${e.message})`;
+  await page.evaluate(async (url) => {
+    const blob = await (await fetch(url)).blob();
+    const dt = new DataTransfer();
+    dt.items.add(new File([blob], 'test.png', { type: 'image/png' }));
+    const input = document.getElementById('file-input');
+    input.files = dt.files;
+    input.dispatchEvent(new Event('change'));
+  }, dataURL);
+}
+await page.waitForFunction(() => {
+  const img = document.querySelector('.layer img');
+  return img && img.naturalWidth > 0;
+});
+await sleep(200);
+const rect0 = await page.$eval('.layer', (el) => el.getBoundingClientRect().toJSON());
+await shot('02-image-added');
+step(rect0.width > 50, `add image (${uploadedVia})`, `layer on stage at (${rect0.x | 0},${rect0.y | 0}) ${rect0.width | 0}x${rect0.height | 0}`);
+
+// Drag the layer by (+200, +120)
+const c0 = { x: rect0.x + rect0.width / 2, y: rect0.y + rect0.height / 2 };
+await page.mouse.move(c0.x, c0.y);
+await page.mouse.down();
+await page.mouse.move(c0.x + 200, c0.y + 120, { steps: 12 });
+await page.mouse.up();
+const rect1 = await page.$eval('.layer', (el) => el.getBoundingClientRect().toJSON());
+const dx = rect1.x - rect0.x;
+const dy = rect1.y - rect0.y;
+step(Math.abs(dx - 200) < 3 && Math.abs(dy - 120) < 3, 'drag layer', `moved by (${dx.toFixed(1)},${dy.toFixed(1)}), expected (200,120)`);
+
+// Wheel-scale around the cursor
+const getScale = () =>
+  page.$eval('.layer', (el) => parseFloat(/scale\(([\d.]+)\)/.exec(el.style.transform)[1]));
+const s0 = await getScale();
+await page.mouse.move(rect1.x + rect1.width / 2, rect1.y + rect1.height / 2);
+let wheelVia = 'mouse.wheel';
+try {
+  await page.mouse.wheel({ deltaY: -400 });
+} catch (e) {
+  wheelVia = `synthetic WheelEvent (mouse.wheel failed: ${e.message})`;
+  await page.evaluate((p) => {
+    window.dispatchEvent(
+      new WheelEvent('wheel', { deltaY: -400, clientX: p.x, clientY: p.y, cancelable: true }),
+    );
+  }, { x: rect1.x + rect1.width / 2, y: rect1.y + rect1.height / 2 });
+}
+await sleep(100);
+const s1 = await getScale();
+step(s1 > s0, `wheel zoom (${wheelVia})`, `scale ${s0} -> ${s1}`);
+await shot('03-dragged-scaled');
+
+// ---- 3. Tilt: sliders and corner drags warp the stage --------------------
+await page.click('#btn-tilt');
+await page.waitForSelector('#keystone-panel:not([hidden])');
+const cornerCount = await page.$$eval('#corners .corner', (els) => els.length);
+step(cornerCount === 4, 'open tilt panel', `${cornerCount} corner handles shown`);
+
+const stageTransform = () => page.$eval('#stage', (el) => el.style.transform);
+const t0 = await stageTransform();
+
+// Corner drag: pull the top-left corner inward and check layer follows
+const cRect = await page.$eval('#corners .corner', (el) => el.getBoundingClientRect().toJSON());
+const layerBefore = await page.$eval('.layer', (el) => el.getBoundingClientRect().toJSON());
+await page.mouse.move(cRect.x + cRect.width / 2, cRect.y + cRect.height / 2);
+await page.mouse.down();
+await page.mouse.move(cRect.x + 120, cRect.y + 80, { steps: 8 });
+await page.mouse.up();
+await sleep(100);
+const t2 = await stageTransform();
+const layerAfter = await page.$eval('.layer', (el) => el.getBoundingClientRect().toJSON());
+const cornerAfter = await page.$eval('#corners .corner', (el) => el.getBoundingClientRect().toJSON());
+const cornerMoved = Math.abs(cornerAfter.x - cRect.x - 120 + cRect.width / 2) < 6;
+const layerMoved = layerBefore.x !== layerAfter.x || layerBefore.width !== layerAfter.width;
+step(t2 !== t0 && cornerMoved && layerMoved, 'corner-pin drag', `corner followed pointer=${cornerMoved}; layer rect ${layerBefore.x | 0},${layerBefore.y | 0},${layerBefore.width | 0} -> ${layerAfter.x | 0},${layerAfter.y | 0},${layerAfter.width | 0}`);
+await shot('05-corner-pin');
+
+// Slider: focus the Y-tilt range and press arrow keys (native range behavior)
+await page.focus('#ks-rotY');
+for (let i = 0; i < 40; i++) await page.keyboard.press('ArrowUp');
+await sleep(100);
+const t1 = await stageTransform();
+const rotY = await page.$eval('#ks-rotY', (el) => el.value);
+step(t1 !== t2 && t1.startsWith('matrix3d'), 'tilt slider (rotY via arrow keys)', `rotY=${rotY}, stage transform now ${t1.slice(0, 40)}...`);
+await shot('04-tilt-slider');
+
+// ---- 4. Freeze + reload restores exact state ------------------------------
+const snapshot = () =>
+  page.evaluate(() => ({
+    stage: document.getElementById('stage').style.transform,
+    sliders: ['ks-rotX', 'ks-rotY', 'ks-rotZ', 'ks-persp'].map((id) => document.getElementById(id).value),
+    layers: [...document.querySelectorAll('.layer')].map((el) => ({
+      left: el.style.left,
+      top: el.style.top,
+      transform: el.style.transform,
+      opacity: el.style.opacity,
+      z: el.style.zIndex,
+    })),
+  }));
+const before = await snapshot();
+
+await page.click('#btn-freeze');
+await page.waitForFunction(() => document.getElementById('btn-freeze').textContent === 'Frozen ✓');
+step(true, 'freeze', 'button flashed "Frozen ✓"');
+
+await page.reload({ waitUntil: 'networkidle0' });
+await page.waitForSelector('#project-list .name');
+const listed = await page.$eval('#project-list .name', (el) => el.textContent);
+step(listed === 'Mural test', 'reload -> picker lists project', `first entry "${listed}"`);
+
+await page.click('#project-list .name');
+await page.waitForSelector('body.editing');
+await page.waitForFunction(() => {
+  const img = document.querySelector('.layer img');
+  return img && img.naturalWidth > 0;
+});
+await page.click('#btn-tilt'); // reopen panel so slider values are comparable
+await sleep(200);
+const after = await snapshot();
+const same = JSON.stringify(before) === JSON.stringify(after);
+step(same, 'reopen restores exact state', same ? 'stage transform, slider values, and all layer styles identical' : `MISMATCH\nbefore=${JSON.stringify(before)}\nafter=${JSON.stringify(after)}`);
+await shot('06-restored');
+
+// ---- Probes ---------------------------------------------------------------
+// Probe: Delete with nothing selected, Escape spam — no crash
+await page.keyboard.press('Escape');
+await page.keyboard.press('Delete');
+await page.keyboard.press('Escape');
+const alive1 = await page.evaluate(() => document.querySelectorAll('.layer').length);
+step(alive1 === 1, 'PROBE delete with nothing selected', `layer count still ${alive1}, no error`);
+
+// Probe: New project with cancelled prompt does nothing
+await page.click('#btn-projects');
+await page.waitForSelector('#picker');
+page.once('dialog', (d) => d.dismiss());
+await page.click('#btn-new');
+await sleep(300);
+const stillPicker = await page.evaluate(() => !document.body.classList.contains('editing'));
+step(stillPicker, 'PROBE cancel new-project prompt', `stayed on picker=${stillPicker}`);
+
+// Probe: wheel-zoom clamp — zoom hard in one direction, layer must not invert/vanish
+await page.click('#project-list .name');
+await page.waitForSelector('body.editing');
+await page.waitForFunction(() => document.querySelector('.layer img')?.naturalWidth > 0);
+const lr = await page.$eval('.layer', (el) => el.getBoundingClientRect().toJSON());
+await page.mouse.move(lr.x + lr.width / 2, lr.y + lr.height / 2);
+for (let i = 0; i < 40; i++) {
+  try { await page.mouse.wheel({ deltaY: 800 }); } catch { break; }
+}
+await sleep(100);
+const sMin = await getScale();
+step(sMin >= 0.02, 'PROBE extreme wheel zoom-out clamps', `scale clamped at ${sMin}`);
+
+// Probe: duplicate then delete project from picker (confirm dialog)
+await page.click('#btn-projects');
+await page.waitForSelector('#project-list .name');
+await page.$$eval('#project-list li button', (btns) => btns.find((b) => b.title === 'Duplicate').click());
+await sleep(300);
+const namesAfterDup = await page.$$eval('#project-list .name', (els) => els.map((e) => e.textContent));
+page.once('dialog', (d) => d.accept());
+await page.$$eval('#project-list li button', (btns) => btns.filter((b) => b.title === 'Delete')[0].click());
+await sleep(300);
+const namesAfterDel = await page.$$eval('#project-list .name', (els) => els.map((e) => e.textContent));
+step(
+  namesAfterDup.includes('Mural test copy') && namesAfterDel.length === namesAfterDup.length - 1,
+  'PROBE duplicate + delete project',
+  `after dup: [${namesAfterDup}]; after del: [${namesAfterDel}]`,
+);
+await shot('07-picker-final');
+
+await browser.close();
+const fails = results.filter((r) => !r.ok).length;
+console.log(`\n${results.length - fails}/${results.length} steps passed`);
+process.exit(fails > 0 ? 1 : 0);
