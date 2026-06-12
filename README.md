@@ -8,11 +8,14 @@ that reopens in exactly the same state.
 No server, no account, no install: the production build is a **single HTML file**.
 All data stays in your browser.
 
+**Use it now: <https://sergeymokhov.github.io/artograph/>**
+
 ![Tilted stage with calibration grid](docs/grid-calibration.png)
 
 ## Quick start
 
-Either build the single file yourself (see [Development](#development)) and open
+Open <https://sergeymokhov.github.io/artograph/> (auto-deployed from `main`),
+build the single file yourself (see [Development](#development)) and open
 `dist/index.html` in a browser, or serve the repo with `yarn dev`.
 
 1. **New project** → name it.
