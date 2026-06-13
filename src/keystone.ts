@@ -1,5 +1,6 @@
 import { IDENTITY, adjugate, applyToPoint, homography, toMatrix3d, type Mat3 } from './homography';
 import { app, mutate } from './state';
+import { toast } from './toast';
 import { defaultKeystone, type KeystoneState, type Pt } from './types';
 
 const stageEl = document.getElementById('stage') as HTMLElement;
@@ -145,6 +146,8 @@ export function initKeystone(): void {
     });
   }
 
+  (document.getElementById('ks-from-pins') as HTMLButtonElement).addEventListener('click', adoptCanvasFromPins);
+
   (document.getElementById('ks-reset') as HTMLButtonElement).addEventListener('click', () => {
     if (!app.project) return;
     app.project.keystone = defaultKeystone();
@@ -180,6 +183,46 @@ function beginCornerDrag(e: PointerEvent, i: number): void {
   };
   window.addEventListener('pointermove', onMove);
   window.addEventListener('pointerup', onUp);
+}
+
+/**
+ * Infer the canvas ratio from the pinned quad's average width/height and
+ * adopt it without moving the quad: the source frame changes, so the offsets
+ * are recomputed to keep every final corner exactly where the user pinned it.
+ * Assumes the projector faces the canvas roughly square-on — under strong
+ * tilt the quad conflates tilt with canvas shape and the estimate drifts.
+ */
+function adoptCanvasFromPins(): void {
+  const ks = app.project?.keystone;
+  if (!ks) return;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const dst = finalCorners(ks, w, h);
+  const avgW = (Math.hypot(dst[1].x - dst[0].x, dst[1].y - dst[0].y) + Math.hypot(dst[2].x - dst[3].x, dst[2].y - dst[3].y)) / 2;
+  const avgH = (Math.hypot(dst[3].x - dst[0].x, dst[3].y - dst[0].y) + Math.hypot(dst[2].x - dst[1].x, dst[2].y - dst[1].y)) / 2;
+  if (avgW < 40 || avgH < 40) {
+    toast('Pin the four corners onto the canvas first', true);
+    return;
+  }
+  // Express the ratio in small integers (1% precision): 0.75 -> 3 x 4.
+  let cw = Math.round((avgW / avgH) * 100);
+  let ch = 100;
+  for (let d = 2; d <= cw && d <= ch; d++) {
+    while (cw % d === 0 && ch % d === 0) {
+      cw /= d;
+      ch /= d;
+    }
+  }
+  ks.canvasW = cw;
+  ks.canvasH = ch;
+  // Re-anchor the quad: new source frame, same final corners.
+  const proj = projectedCorners(ks, w, h);
+  ks.offsets = dst.map((p, i) => ({
+    x: (p.x - proj[i].x) / w,
+    y: (p.y - proj[i].y) / h,
+  })) as [Pt, Pt, Pt, Pt];
+  toast(`Canvas ratio set from pins: ${cw} × ${ch}`);
+  mutate();
 }
 
 export function toggleCalibrate(force?: boolean): void {

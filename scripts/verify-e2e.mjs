@@ -319,6 +319,60 @@ step(
   `4:3 image renders ${aspectRect.width.toFixed(1)}x${aspectRect.height.toFixed(1)}, ratio ${ratio.toFixed(3)} (expect 1.333; pre-fix would be ~0.62)`,
 );
 await shot('06b-aspect-canvas');
+
+// ---- "From pins": infer the canvas ratio from the pinned quad --------------
+await page.click('#ks-reset');
+await sleep(100);
+// With no canvas set, true corners rest at the screen corners. Pin the same
+// 3:4 quad (450x600 centered) by delta-dragging each (clamped) pin.
+const screenRest = [[0, 0], [1280, 0], [1280, 800], [0, 800]];
+for (let i = 0; i < 4; i++) {
+  const pin = await page.$$eval(
+    '#corners .corner',
+    (els, j) => {
+      const r = els[j].getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    },
+    i,
+  );
+  await page.mouse.move(pin.x, pin.y);
+  await page.mouse.down();
+  await page.mouse.move(pin.x + targetTrue[i][0] - screenRest[i][0], pin.y + targetTrue[i][1] - screenRest[i][1], { steps: 5 });
+  await page.mouse.up();
+  await sleep(50);
+}
+const distortedRatio = await page.$eval('.layer', (el) => {
+  const r = el.getBoundingClientRect();
+  return r.width / r.height;
+});
+const pinsBefore = await page.$$eval('#corners .corner', (els) =>
+  els.map((el) => {
+    const r = el.getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  }),
+);
+await page.click('#ks-from-pins');
+await sleep(150);
+const inferred = await page.evaluate(() => [
+  document.getElementById('ks-canvasW').value,
+  document.getElementById('ks-canvasH').value,
+]);
+const pinsAfter = await page.$$eval('#corners .corner', (els) =>
+  els.map((el) => {
+    const r = el.getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  }),
+);
+const quadHeld = pinsBefore.every((p, i) => Math.abs(p.x - pinsAfter[i].x) < 2 && Math.abs(p.y - pinsAfter[i].y) < 2);
+const fixedRatio = await page.$eval('.layer', (el) => {
+  const r = el.getBoundingClientRect();
+  return r.width / r.height;
+});
+step(
+  inferred[0] === '3' && inferred[1] === '4' && quadHeld && Math.abs(fixedRatio - 4 / 3) < 0.02,
+  'From pins infers canvas ratio without moving the quad',
+  `inferred ${inferred[0]}x${inferred[1]}; quad held=${quadHeld}; content ratio ${distortedRatio.toFixed(3)} -> ${fixedRatio.toFixed(3)} (expect 1.333)`,
+);
 await page.click('#ks-reset');
 await page.click('#btn-tilt');
 
