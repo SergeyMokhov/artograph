@@ -3,7 +3,7 @@ import { DEMO_ID, createDemoProject, ensureDemoProject } from './demo';
 import { exportProject, importProject } from './export';
 import { initInteractions } from './interactions';
 import { applyKeystone, initKeystone, toggleCalibrate } from './keystone';
-import { addImageFiles, deleteSelected, releaseImageURLs, renderStage, reorderSelected, selectedLayer, toggleInvertSelected, toggleLockSelected } from './stage';
+import { addImageFiles, deleteSelected, releaseImageURLs, renderStage, reorderSelected, selectedLayer, toggleInvertSelected, toggleLockSelected, toggleOutlineSelected } from './stage';
 import { app, mutate, subscribe } from './state';
 import { deleteProject, listProjects, saveProject } from './store';
 import { errMsg, toast } from './toast';
@@ -138,6 +138,15 @@ function updateToolbar(): void {
     lockBtn.title = sel.locked ? 'Unfreeze image (L)' : 'Freeze image in place (L)';
     lockBtn.classList.toggle('active', sel.locked === true);
     $<HTMLButtonElement>('#btn-invert').classList.toggle('active', sel.invert === true);
+
+    const outlineOn = sel.outline?.on === true;
+    $<HTMLButtonElement>('#btn-outline').classList.toggle('active', outlineOn);
+    $('#outline-controls').hidden = !outlineOn;
+    if (outlineOn && sel.outline) {
+      $<HTMLInputElement>('#ol-threshold').value = String(sel.outline.threshold);
+      $<HTMLInputElement>('#ol-thickness').value = String(sel.outline.thickness);
+      $<HTMLInputElement>('#ol-color').value = sel.outline.color;
+    }
   }
 }
 
@@ -188,6 +197,27 @@ function initToolbar(): void {
     mutate();
   });
   $('#btn-invert').addEventListener('click', toggleInvertSelected);
+  $('#btn-outline').addEventListener('click', toggleOutlineSelected);
+  // Recompute on `change` (slider release / picker close), not `input`, so
+  // dragging doesn't fire a burst of synchronous edge-detection passes.
+  $<HTMLInputElement>('#ol-threshold').addEventListener('change', (e) => {
+    const sel = selectedLayer();
+    if (!sel?.outline) return;
+    sel.outline.threshold = parseFloat((e.target as HTMLInputElement).value);
+    mutate();
+  });
+  $<HTMLInputElement>('#ol-thickness').addEventListener('change', (e) => {
+    const sel = selectedLayer();
+    if (!sel?.outline) return;
+    sel.outline.thickness = parseInt((e.target as HTMLInputElement).value, 10);
+    mutate();
+  });
+  $<HTMLInputElement>('#ol-color').addEventListener('change', (e) => {
+    const sel = selectedLayer();
+    if (!sel?.outline) return;
+    sel.outline.color = (e.target as HTMLInputElement).value;
+    mutate();
+  });
   $('#btn-lock').addEventListener('click', toggleLockSelected);
   $('#btn-del').addEventListener('click', deleteSelected);
   $('#btn-front').addEventListener('click', () => reorderSelected(1));

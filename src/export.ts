@@ -1,5 +1,5 @@
 import { getImageBlob, saveImageBlob, saveProject } from './store';
-import { defaultKeystone, type Layer, type ProjectDoc } from './types';
+import { defaultKeystone, type Layer, type OutlineOpts, type ProjectDoc } from './types';
 
 interface ExportPayload {
   format: 'artograph';
@@ -37,6 +37,21 @@ export async function exportProject(project: ProjectDoc): Promise<void> {
 }
 
 const num = (v: unknown, fallback: number) => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
+
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+/** Validate an untrusted outline blob, or drop it (returns undefined). */
+function parseOutline(v: unknown): OutlineOpts | undefined {
+  if (typeof v !== 'object' || v === null) return undefined;
+  const o = v as Partial<OutlineOpts>;
+  const color = typeof o.color === 'string' && /^#[0-9a-f]{6}$/i.test(o.color) ? o.color : '#ff00ff';
+  return {
+    on: o.on === true,
+    threshold: clamp(num(o.threshold, 0.18), 0, 1),
+    thickness: clamp(Math.round(num(o.thickness, 1)), 0, 8),
+    color,
+  };
+}
 
 /** Parse untrusted file content into a validated ProjectDoc (or throw). */
 export async function importProject(file: File): Promise<ProjectDoc> {
@@ -78,6 +93,7 @@ export async function importProject(file: File): Promise<ProjectDoc> {
         opacity: Math.min(1, Math.max(0.05, num(l.opacity, 1))),
         locked: l.locked === true,
         invert: l.invert === true,
+        outline: parseOutline(l.outline),
       },
     ];
   });

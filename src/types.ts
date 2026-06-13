@@ -20,6 +20,27 @@ export interface Layer {
   locked: boolean;
   /** Render with colors inverted (negative) — useful for tracing. */
   invert: boolean;
+  /**
+   * Replace the image with detected edges (object outline + colour
+   * boundaries) drawn as bright lines — high-visibility tracing in daylight.
+   * Absent/`on: false` means show the original image.
+   */
+  outline?: OutlineOpts;
+}
+
+export interface OutlineOpts {
+  on: boolean;
+  /** Edge sensitivity, 0..1 relative to the image's strongest edge (lower = more lines). */
+  threshold: number;
+  /** Line thickness as a dilation radius in source pixels (0 = thinnest). */
+  thickness: number;
+  /** Line colour as a `#rrggbb` hex string. */
+  color: string;
+}
+
+/** Outline settings applied when the effect is first switched on. */
+export function defaultOutline(): OutlineOpts {
+  return { on: true, threshold: 0.18, thickness: 1, color: '#ff00ff' };
 }
 
 export interface KeystoneState {

@@ -25,6 +25,12 @@
         <span id="sel-controls" hidden>
           <label title="Layer opacity">◐ <input id="sel-opacity" type="range" min="0.05" max="1" step="0.05" /></label>
           <button id="btn-invert" title="Invert colors (I)">◑</button>
+          <button id="btn-outline" title="Trace outline / colour edges (O)">⬚</button>
+          <span id="outline-controls" hidden>
+            <label title="Edge sensitivity — lower shows more lines">⊿ <input id="ol-threshold" type="range" min="0.02" max="0.6" step="0.01" /></label>
+            <label title="Line thickness">≣ <input id="ol-thickness" type="range" min="0" max="4" step="1" /></label>
+            <input id="ol-color" type="color" title="Line colour" />
+          </span>
           <button id="btn-lock" title="Freeze image in place (L)">🔓</button>
           <button id="btn-back" title="Send backward ([)">▼</button>
           <button id="btn-front" title="Bring forward (])">▲</button>

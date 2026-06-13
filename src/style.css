@@ -65,6 +65,34 @@ body {
   background: rgb(59 130 246 / 55%);
 }
 
+#btn-outline.active {
+  background: rgb(236 72 153 / 55%);
+}
+
+#outline-controls {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+#outline-controls[hidden] {
+  display: none;
+}
+
+#outline-controls input[type='range'] {
+  width: 64px;
+}
+
+#outline-controls input[type='color'] {
+  width: 26px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
 /* Selection handles: counter-scaled via --k so they stay a constant
    on-screen size regardless of the layer's zoom. */
 .layer .handles {

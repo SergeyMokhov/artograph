@@ -1,5 +1,5 @@
 import { screenToStage } from './keystone';
-import { addImageFiles, deleteSelected, nudgeSelected, reorderSelected, selectedLayer, toggleInvertSelected, toggleLockSelected } from './stage';
+import { addImageFiles, deleteSelected, nudgeSelected, reorderSelected, selectedLayer, toggleInvertSelected, toggleLockSelected, toggleOutlineSelected } from './stage';
 import { app, mutate } from './state';
 import type { Layer, Pt } from './types';
 
@@ -161,6 +161,10 @@ function onKeyDown(e: KeyboardEvent): void {
     case 'i':
     case 'I':
       toggleInvertSelected();
+      break;
+    case 'o':
+    case 'O':
+      toggleOutlineSelected();
       break;
     default:
       return;

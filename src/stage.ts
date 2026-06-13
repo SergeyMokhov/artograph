@@ -1,11 +1,14 @@
 import { screenToStage } from './keystone';
+import { renderOutline } from './outline';
 import { app, mutate } from './state';
 import { getImageBlob, saveImageBlob } from './store';
 import { toast } from './toast';
-import type { Layer, Pt } from './types';
+import { defaultOutline, type Layer, type OutlineOpts, type Pt } from './types';
 
 const layersEl = document.getElementById('layers') as HTMLElement;
 const urlCache = new Map<string, string>();
+// Computed-outline object URLs, keyed by image + the settings that produced it.
+const outlineCache = new Map<string, string>();
 
 async function imageURL(imageId: string): Promise<string> {
   let url = urlCache.get(imageId);
@@ -18,10 +21,28 @@ async function imageURL(imageId: string): Promise<string> {
   return url;
 }
 
+function outlineKey(imageId: string, o: OutlineOpts): string {
+  return `${imageId}|${o.threshold}|${o.thickness}|${o.color}`;
+}
+
+async function outlineURL(imageId: string, o: OutlineOpts): Promise<string> {
+  const key = outlineKey(imageId, o);
+  let url = outlineCache.get(key);
+  if (url === undefined) {
+    const blob = await getImageBlob(imageId);
+    if (!blob) throw new Error(`image ${imageId} missing from store`);
+    url = URL.createObjectURL(await renderOutline(blob, o));
+    outlineCache.set(key, url);
+  }
+  return url;
+}
+
 /** Revoke object URLs when closing a project. */
 export function releaseImageURLs(): void {
   for (const url of urlCache.values()) URL.revokeObjectURL(url);
+  for (const url of outlineCache.values()) URL.revokeObjectURL(url);
   urlCache.clear();
+  outlineCache.clear();
 }
 
 export function selectedLayer(): Layer | undefined {
@@ -35,9 +56,7 @@ function createLayerEl(layer: Layer): HTMLElement {
   const img = document.createElement('img');
   img.draggable = false;
   img.alt = '';
-  void imageURL(layer.imageId).then((url) => {
-    img.src = url;
-  });
+  // src is set reactively in renderStage so it can swap to the outline render.
   const handles = document.createElement('div');
   handles.className = 'handles';
   for (const corner of ['tl', 'tr', 'br', 'bl']) {
@@ -52,6 +71,29 @@ function createLayerEl(layer: Layer): HTMLElement {
   handles.append(rot);
   el.append(img, handles);
   return el;
+}
+
+/**
+ * Point an <img> at the original image or its computed outline, depending on
+ * the layer's settings. The desired source is recorded on the element so we
+ * only recompute when it actually changes, and a slow async outline render
+ * that finishes after the user moved on is discarded.
+ */
+function resolveLayerSrc(img: HTMLImageElement, layer: Layer): void {
+  const o = layer.outline;
+  const want = o?.on ? `outline|${outlineKey(layer.imageId, o)}` : `orig|${layer.imageId}`;
+  if (img.dataset.srcKey === want) return;
+  img.dataset.srcKey = want;
+  const pending = o?.on ? outlineURL(layer.imageId, o) : imageURL(layer.imageId);
+  pending.then(
+    (url) => {
+      // Only apply if this is still the source the layer wants.
+      if (img.dataset.srcKey === want) img.src = url;
+    },
+    (err: unknown) => {
+      if (img.dataset.srcKey === want) toast(`Outline failed: ${String(err)}`, true);
+    },
+  );
 }
 
 export function renderStage(): void {
@@ -73,7 +115,10 @@ export function renderStage(): void {
     el.style.opacity = String(layer.opacity);
     // Invert on the <img> only, so selection handles aren't affected.
     const img = el.querySelector('img');
-    if (img) img.style.filter = layer.invert ? 'invert(1)' : '';
+    if (img) {
+      img.style.filter = layer.invert ? 'invert(1)' : '';
+      resolveLayerSrc(img, layer);
+    }
     // Counter-scale so selection chrome keeps a constant on-screen size.
     el.style.setProperty('--k', String(1 / layer.scale));
     el.classList.toggle('selected', layer.id === app.selectedId);
@@ -159,6 +204,18 @@ export function toggleInvertSelected(): void {
   const layer = selectedLayer();
   if (!layer) return;
   layer.invert = !layer.invert;
+  mutate();
+}
+
+/**
+ * Toggle the outline (edge-detection) effect on the selected layer. Keeps any
+ * previously-tuned settings; only flips `on`. Allowed even when locked.
+ */
+export function toggleOutlineSelected(): void {
+  const layer = selectedLayer();
+  if (!layer) return;
+  if (layer.outline) layer.outline.on = !layer.outline.on;
+  else layer.outline = defaultOutline();
   mutate();
 }
 
