@@ -10,7 +10,7 @@ All data stays in your browser.
 
 **Use it now: <https://sergeymokhov.github.io/artograph/>**
 
-![Tilted stage with calibration grid](docs/grid-calibration.png)
+![The built-in demo calibration card on the stage](docs/demo-stage.png)
 
 ## Quick start
 
@@ -49,7 +49,7 @@ build the single file yourself (see [Development](#development)) and open
    second after every change. Reopening the project restores positions, scale,
    and tilt exactly.
 
-![Corner-pin keystone correction](docs/corner-pin.png)
+![Corner pins on a portrait canvas with the tilt panel and calibration grid; only what is inside the pinned quad lands on the canvas](docs/tilt-calibration.png)
 
 ## Keyboard shortcuts
 
