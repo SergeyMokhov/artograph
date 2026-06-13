@@ -82,6 +82,26 @@ function nextZ(): number {
   return Math.max(0, ...(app.project?.layers.map((l) => l.z) ?? [])) + 1;
 }
 
+async function imageDimensions(blob: Blob): Promise<{ w: number; h: number }> {
+  try {
+    const bmp = await createImageBitmap(blob);
+    const d = { w: bmp.width, h: bmp.height };
+    bmp.close();
+    return d;
+  } catch {
+    // createImageBitmap rejects SVG blobs; decode through an <img> instead.
+    const url = URL.createObjectURL(blob);
+    try {
+      const img = new Image();
+      img.src = url;
+      await img.decode();
+      return { w: img.naturalWidth || 800, h: img.naturalHeight || 600 };
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+}
+
 export async function addImageFiles(files: Iterable<File>, at?: Pt): Promise<void> {
   const project = app.project;
   if (!project) return;
@@ -89,13 +109,8 @@ export async function addImageFiles(files: Iterable<File>, at?: Pt): Promise<voi
   for (const file of files) {
     if (!file.type.startsWith('image/')) continue;
     const imageId = await saveImageBlob(file);
-    const bmp = await createImageBitmap(file);
-    const scale = Math.min(
-      1,
-      (0.6 * window.innerWidth) / bmp.width,
-      (0.6 * window.innerHeight) / bmp.height,
-    );
-    bmp.close();
+    const { w, h } = await imageDimensions(file);
+    const scale = Math.min(1, (0.6 * window.innerWidth) / w, (0.6 * window.innerHeight) / h);
     const layer: Layer = {
       id: crypto.randomUUID(),
       imageId,

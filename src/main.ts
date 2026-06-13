@@ -1,4 +1,5 @@
 import './style.css';
+import { DEMO_ID, createDemoProject, ensureDemoProject } from './demo';
 import { exportProject, importProject } from './export';
 import { initInteractions } from './interactions';
 import { applyKeystone, initKeystone, toggleCalibrate } from './keystone';
@@ -47,6 +48,7 @@ async function showPicker(): Promise<void> {
   toggleCalibrate(false);
   renderStage();
 
+  await ensureDemoProject();
   const docs = await listProjects();
   pickerList.replaceChildren(
     ...docs.map((doc) => {
@@ -100,10 +102,18 @@ function pickerActions(doc: ProjectDoc): HTMLElement[] {
       copy.name = `${doc.name} copy`;
       void saveProject(copy).then(showPicker);
     }),
-    make('🗑', 'Delete', () => {
-      if (!confirm(`Delete project "${doc.name}"? This cannot be undone.`)) return;
-      void deleteProject(doc.id).then(showPicker);
-    }),
+    doc.id === DEMO_ID
+      ? make('↺', 'Reset demo project to its original state', () => {
+          if (!confirm(`Reset "${doc.name}" to its original state?`)) return;
+          void createDemoProject().then(() => {
+            toast('Demo project reset ✓');
+            return showPicker();
+          });
+        })
+      : make('🗑', 'Delete', () => {
+          if (!confirm(`Delete project "${doc.name}"? This cannot be undone.`)) return;
+          void deleteProject(doc.id).then(showPicker);
+        }),
   ];
 }
 

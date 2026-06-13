@@ -32,6 +32,61 @@ const pickerShown = await page.$eval('#picker', (el) => getComputedStyle(el).dis
 await shot('01-picker');
 step(pickerShown, 'open app', `picker visible=${pickerShown}`);
 
+// ---- Demo project: exists, Reset instead of Delete, SVG renders, resets ----
+const demoName = 'Demo — calibration target';
+const demoButtons = await page.$$eval(
+  '#project-list li',
+  (lis, dn) => {
+    const li = lis.find((l) => l.querySelector('.name')?.textContent === dn);
+    return li ? [...li.querySelectorAll('button')].map((b) => b.title) : null;
+  },
+  demoName,
+);
+step(
+  demoButtons !== null && demoButtons.some((t) => t.includes('Reset')) && !demoButtons.includes('Delete'),
+  'demo project exists with Reset (no Delete)',
+  `demo row buttons: ${demoButtons ? demoButtons.join(' | ') : 'project missing'}`,
+);
+
+const clickDemo = () =>
+  page.$$eval('#project-list .name', (els, dn) => els.find((e) => e.textContent === dn).click(), demoName);
+await clickDemo();
+await page.waitForSelector('body.editing');
+await page.waitForFunction(() => document.querySelector('.layer img')?.naturalWidth > 0);
+const pristineLeft = await page.$eval('.layer', (el) => el.style.left);
+await shot('00-demo-calibration');
+
+// Drag the calibration layer away, then Reset from the picker
+const dr = await page.$eval('.layer', (el) => el.getBoundingClientRect().toJSON());
+await page.mouse.move(dr.x + dr.width / 2, dr.y + dr.height / 2);
+await page.mouse.down();
+await page.mouse.move(dr.x + dr.width / 2 + 130, dr.y + dr.height / 2 + 60, { steps: 6 });
+await page.mouse.up();
+const movedLeft = await page.$eval('.layer', (el) => el.style.left);
+await page.click('#btn-projects');
+await page.waitForSelector('#project-list .name');
+page.once('dialog', (d) => d.accept());
+await page.$$eval(
+  '#project-list li',
+  (lis, dn) => {
+    const li = lis.find((l) => l.querySelector('.name')?.textContent === dn);
+    [...li.querySelectorAll('button')].find((b) => b.title.includes('Reset')).click();
+  },
+  demoName,
+);
+await sleep(500);
+await clickDemo();
+await page.waitForSelector('body.editing');
+await page.waitForFunction(() => document.querySelector('.layer img')?.naturalWidth > 0);
+const resetLeft = await page.$eval('.layer', (el) => el.style.left);
+step(
+  movedLeft !== pristineLeft && resetLeft === pristineLeft,
+  'demo reset restores pristine state',
+  `pristine=${pristineLeft} moved=${movedLeft} after-reset=${resetLeft}`,
+);
+await page.click('#btn-projects');
+await page.waitForSelector('#project-list .name');
+
 page.once('dialog', (d) => d.accept('Mural test'));
 await page.click('#btn-new');
 await page.waitForSelector('body.editing');

@@ -18,9 +18,14 @@ Open <https://sergeymokhov.github.io/artograph/> (auto-deployed from `main`),
 build the single file yourself (see [Development](#development)) and open
 `dist/index.html` in a browser, or serve the repo with `yarn dev`.
 
-1. **New project** → name it.
+1. **New project** → name it. (A **Demo — calibration target** project is
+   created automatically on first run: a transparent SVG test card with a
+   100 px grid, circles, focus checkerboard, and gray/color bars for dialing
+   in the projector. It has a ↺ Reset button in the project list instead of
+   Delete, so you can always restore it to its original state.)
 2. **Add images**: click `+ Images`, or drag & drop files onto the page, or paste
-   from the clipboard.
+   from the clipboard. PNG/SVG transparency is respected — alpha regions show
+   whatever is underneath.
 3. **Arrange**: drag to move; mouse-wheel over an image to scale it around the
    cursor; use the corner handles to resize and the round top handle to rotate
    (hold <kbd>Shift</kbd> to snap to 15°). Selected images get opacity and
