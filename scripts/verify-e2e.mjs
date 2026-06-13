@@ -373,6 +373,33 @@ step(
   'From pins infers canvas ratio without moving the quad',
   `inferred ${inferred[0]}x${inferred[1]}; quad held=${quadHeld}; content ratio ${distortedRatio.toFixed(3)} -> ${fixedRatio.toFixed(3)} (expect 1.333)`,
 );
+
+// Typing a different ratio with pinned corners must also hold the quad.
+// 1:1 source on a 450x600 quad renders the 4:3 image at ratio (4/3)*(600/450*3/4)=1.0
+await page.evaluate(() => {
+  for (const [id, v] of [['ks-canvasW', '1'], ['ks-canvasH', '1']]) {
+    const el = document.getElementById(id);
+    el.value = v;
+    el.dispatchEvent(new Event('input'));
+  }
+});
+await sleep(150);
+const pinsTyped = await page.$$eval('#corners .corner', (els) =>
+  els.map((el) => {
+    const r = el.getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  }),
+);
+const quadHeldTyped = pinsAfter.every((p, i) => Math.abs(p.x - pinsTyped[i].x) < 2 && Math.abs(p.y - pinsTyped[i].y) < 2);
+const typedRatio = await page.$eval('.layer', (el) => {
+  const r = el.getBoundingClientRect();
+  return r.width / r.height;
+});
+step(
+  quadHeldTyped && Math.abs(typedRatio - 1.0) < 0.02,
+  'typing a canvas ratio keeps the pinned quad in place',
+  `quad held=${quadHeldTyped}; content ratio ${typedRatio.toFixed(3)} (expect 1.000 for 1:1 source on this quad)`,
+);
 await page.click('#ks-reset');
 await page.click('#btn-tilt');
 

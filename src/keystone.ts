@@ -140,8 +140,15 @@ export function initKeystone(): void {
     canvasInput(f).addEventListener('input', () => {
       const ks = app.project?.keystone;
       if (!ks) return;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      // If the corners are already pinned, changing the ratio must not move
+      // the quad off the canvas; re-anchor. Untouched pins follow the frame.
+      const pinned = ks.offsets.some((o) => o.x !== 0 || o.y !== 0);
+      const dst = pinned ? finalCorners(ks, w, h) : null;
       const v = parseFloat(canvasInput(f).value);
       ks[f] = Number.isFinite(v) && v > 0 ? v : undefined;
+      if (dst) reanchorOffsets(ks, dst, w, h);
       mutate();
     });
   }
@@ -185,6 +192,15 @@ function beginCornerDrag(e: PointerEvent, i: number): void {
   window.addEventListener('pointerup', onUp);
 }
 
+/** Recompute offsets so the final corners stay at `dst` under the current src frame. */
+function reanchorOffsets(ks: KeystoneState, dst: [Pt, Pt, Pt, Pt], w: number, h: number): void {
+  const proj = projectedCorners(ks, w, h);
+  ks.offsets = dst.map((p, i) => ({
+    x: (p.x - proj[i].x) / w,
+    y: (p.y - proj[i].y) / h,
+  })) as [Pt, Pt, Pt, Pt];
+}
+
 /**
  * Infer the canvas ratio from the pinned quad's average width/height and
  * adopt it without moving the quad: the source frame changes, so the offsets
@@ -216,11 +232,7 @@ function adoptCanvasFromPins(): void {
   ks.canvasW = cw;
   ks.canvasH = ch;
   // Re-anchor the quad: new source frame, same final corners.
-  const proj = projectedCorners(ks, w, h);
-  ks.offsets = dst.map((p, i) => ({
-    x: (p.x - proj[i].x) / w,
-    y: (p.y - proj[i].y) / h,
-  })) as [Pt, Pt, Pt, Pt];
+  reanchorOffsets(ks, dst, w, h);
   toast(`Canvas ratio set from pins: ${cw} × ${ch}`);
   mutate();
 }
