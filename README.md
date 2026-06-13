@@ -34,10 +34,12 @@ build the single file yourself (see [Development](#development)) and open
    the others — frozen images show an amber dashed outline when selected and
    ignore move/scale/rotate/delete until unfrozen.
 4. **Project & calibrate**: press <kbd>F</kbd> for fullscreen on the projector.
-   If the canvas is angled, open **Tilt** (<kbd>T</kbd>) and drag the four ◆
-   corner pins until the projection sits true on the surface — or fine-tune with
-   the rotate/perspective sliders. Toggle the **Grid** (<kbd>G</kbd>) and adjust
-   until its squares look square on the physical surface.
+   Open **Tilt** (<kbd>T</kbd>) and enter your canvas size (any units — only the
+   ratio matters, e.g. `60 × 80`); this keeps artwork at its true proportions
+   when the canvas's shape differs from the screen's. Then drag the four ◆
+   corner pins onto the canvas — or fine-tune with the rotate/perspective
+   sliders. Toggle the **Grid** (<kbd>G</kbd>) and adjust until its squares look
+   square on the physical surface.
 5. **Trace**: stop moving the mouse and all controls (and the cursor) disappear
    after 3 seconds, leaving a clean projection. Move the mouse to get them back.
 6. **Save** writes the project immediately; the app also autosaves about a

@@ -271,6 +271,57 @@ const same = JSON.stringify(before) === JSON.stringify(after);
 step(same, 'reopen restores exact state', same ? 'stage transform, slider values, and all layer styles identical' : `MISMATCH\nbefore=${JSON.stringify(before)}\nafter=${JSON.stringify(after)}`);
 await shot('06-restored');
 
+// ---- Canvas aspect: content keeps proportions when pinned to a 3:4 canvas --
+await page.click('#ks-reset');
+await sleep(100);
+await page.evaluate(() => {
+  for (const [id, v] of [['ks-canvasW', '3'], ['ks-canvasH', '4']]) {
+    const el = document.getElementById(id);
+    el.value = v;
+    el.dispatchEvent(new Event('input'));
+  }
+});
+await sleep(100);
+// 3:4 in a 1280x800 viewport -> source frame 600x800 centered: x 340..940
+const restPins = await page.$$eval('#corners .corner', (els) =>
+  els.map((el) => {
+    const r = el.getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  }),
+);
+const pinsInset = Math.abs(restPins[0].x - 340) < 3 && Math.abs(restPins[1].x - 940) < 3;
+step(pinsInset, 'canvas 3:4 insets pins to a portrait frame', restPins.map((p) => `(${p.x | 0},${p.y | 0})`).join(' '));
+
+// Drag all 4 pins onto a 3:4 "canvas" quad (450x600 centered). True corners
+// rest at (340,0)(940,0)(940,800)(340,800); drags are delta-based.
+const targetTrue = [[415, 100], [865, 100], [865, 700], [415, 700]];
+const trueRest = [[340, 0], [940, 0], [940, 800], [340, 800]];
+for (let i = 0; i < 4; i++) {
+  const pin = await page.$$eval(
+    '#corners .corner',
+    (els, j) => {
+      const r = els[j].getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    },
+    i,
+  );
+  await page.mouse.move(pin.x, pin.y);
+  await page.mouse.down();
+  await page.mouse.move(pin.x + targetTrue[i][0] - trueRest[i][0], pin.y + targetTrue[i][1] - trueRest[i][1], { steps: 5 });
+  await page.mouse.up();
+  await sleep(50);
+}
+const aspectRect = await page.$eval('.layer', (el) => el.getBoundingClientRect().toJSON());
+const ratio = aspectRect.width / aspectRect.height;
+step(
+  Math.abs(ratio - 4 / 3) < 0.02,
+  'content keeps its proportions on a 3:4 canvas',
+  `4:3 image renders ${aspectRect.width.toFixed(1)}x${aspectRect.height.toFixed(1)}, ratio ${ratio.toFixed(3)} (expect 1.333; pre-fix would be ~0.62)`,
+);
+await shot('06b-aspect-canvas');
+await page.click('#ks-reset');
+await page.click('#btn-tilt');
+
 // ---- Probes ---------------------------------------------------------------
 // Probe: Delete with nothing selected, Escape spam — no crash
 await page.keyboard.press('Escape');

@@ -16,12 +16,28 @@ export function screenToStage(p: Pt): Pt {
 
 const DEG = Math.PI / 180;
 
-function baseCorners(w: number, h: number): [Pt, Pt, Pt, Pt] {
+/**
+ * Source rectangle of the homography. Without a canvas size this is the full
+ * viewport; with one it is the largest centered rect of the canvas's aspect,
+ * so mapping it onto the canvas quad scales content uniformly.
+ */
+function srcCorners(ks: KeystoneState, w: number, h: number): [Pt, Pt, Pt, Pt] {
+  let sw = w;
+  let sh = h;
+  const cw = ks.canvasW ?? 0;
+  const ch = ks.canvasH ?? 0;
+  if (cw > 0 && ch > 0) {
+    const aspect = cw / ch;
+    if (aspect < w / h) sw = h * aspect;
+    else sh = w / aspect;
+  }
+  const x0 = (w - sw) / 2;
+  const y0 = (h - sh) / 2;
   return [
-    { x: 0, y: 0 },
-    { x: w, y: 0 },
-    { x: w, y: h },
-    { x: 0, y: h },
+    { x: x0, y: y0 },
+    { x: x0 + sw, y: y0 },
+    { x: x0 + sw, y: y0 + sh },
+    { x: x0, y: y0 + sh },
   ];
 }
 
@@ -32,7 +48,7 @@ function projectedCorners(ks: KeystoneState, w: number, h: number): [Pt, Pt, Pt,
   const ax = ks.rotX * DEG;
   const ay = ks.rotY * DEG;
   const az = ks.rotZ * DEG;
-  return baseCorners(w, h).map((p) => {
+  return srcCorners(ks, w, h).map((p) => {
     let x = p.x - cx;
     let y = p.y - cy;
     let z = 0;
@@ -59,7 +75,7 @@ export function applyKeystone(): void {
   const w = window.innerWidth;
   const h = window.innerHeight;
   const dst = finalCorners(ks, w, h);
-  H = homography(baseCorners(w, h), dst);
+  H = homography(srcCorners(ks, w, h), dst);
   Hinv = adjugate(H);
   stageEl.style.transform = toMatrix3d(H);
   // Keep the handles fully visible and grabbable even when the true corner
@@ -70,9 +86,25 @@ export function applyKeystone(): void {
     el.style.top = `${Math.min(Math.max(dst[i].y, M), h - M)}px`;
   });
   syncSliders(ks);
+  syncCanvasInputs(ks);
 }
 
 const SLIDER_FIELDS = ['rotX', 'rotY', 'rotZ', 'persp'] as const;
+const CANVAS_FIELDS = ['canvasW', 'canvasH'] as const;
+
+function canvasInput(field: (typeof CANVAS_FIELDS)[number]): HTMLInputElement {
+  return document.getElementById(`ks-${field}`) as HTMLInputElement;
+}
+
+function syncCanvasInputs(ks: KeystoneState): void {
+  for (const f of CANVAS_FIELDS) {
+    const el = canvasInput(f);
+    // Don't fight the user while they're typing in the field.
+    if (document.activeElement === el) continue;
+    const v = ks[f];
+    el.value = v !== undefined && v > 0 ? String(v) : '';
+  }
+}
 
 function slider(field: (typeof SLIDER_FIELDS)[number]): HTMLInputElement {
   return document.getElementById(`ks-${field}`) as HTMLInputElement;
@@ -99,6 +131,16 @@ export function initKeystone(): void {
       const ks = app.project?.keystone;
       if (!ks) return;
       ks[f] = parseFloat(slider(f).value);
+      mutate();
+    });
+  }
+
+  for (const f of CANVAS_FIELDS) {
+    canvasInput(f).addEventListener('input', () => {
+      const ks = app.project?.keystone;
+      if (!ks) return;
+      const v = parseFloat(canvasInput(f).value);
+      ks[f] = Number.isFinite(v) && v > 0 ? v : undefined;
       mutate();
     });
   }

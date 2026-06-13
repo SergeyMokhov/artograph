@@ -28,6 +28,13 @@ export interface KeystoneState {
   /** Perspective (camera) distance in px. */
   persp: number;
   /**
+   * Physical canvas size in any unit (only the ratio matters). When set, the
+   * homography's source is a centered rect of this aspect instead of the full
+   * viewport, so content keeps its proportions when pinned onto the canvas.
+   */
+  canvasW?: number;
+  canvasH?: number;
+  /**
    * Per-corner nudge added after the rotation projection, as a fraction of
    * stage width/height so it survives window-size changes. Order: TL TR BR BL.
    */
@@ -40,6 +47,8 @@ export interface ProjectDoc {
   savedAt: number;
   keystone: KeystoneState;
   layers: Layer[];
+  /** Set on the built-in demo project; bumping it refreshes the demo. */
+  demoVersion?: number;
 }
 
 export function defaultKeystone(): KeystoneState {

@@ -219,6 +219,22 @@ button:hover {
   width: 160px;
 }
 
+#keystone-panel input[type='number'] {
+  width: 62px;
+  padding: 3px 6px;
+  border: none;
+  border-radius: 5px;
+  background: rgb(255 255 255 / 14%);
+  color: inherit;
+  font: inherit;
+}
+
+#keystone-panel .canvas-size {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
 .corner {
   position: fixed;
   width: 18px;

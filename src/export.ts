@@ -58,6 +58,10 @@ export async function importProject(file: File): Promise<ProjectDoc> {
 
   const ks = { ...defaultKeystone(), ...(typeof raw.keystone === 'object' ? raw.keystone : null) };
   if (!Array.isArray(ks.offsets) || ks.offsets.length !== 4) ks.offsets = defaultKeystone().offsets;
+  for (const f of ['canvasW', 'canvasH'] as const) {
+    const v = ks[f];
+    if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0) delete ks[f];
+  }
 
   const layers: Layer[] = rawLayers.flatMap((l: Partial<Layer>, i): Layer[] => {
     const imageId = typeof l.imageId === 'string' ? idMap.get(l.imageId) : undefined;
