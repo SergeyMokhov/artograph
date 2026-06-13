@@ -63,11 +63,13 @@ function createLayerEl(layer: Layer): HTMLElement {
     const h = document.createElement('span');
     h.className = `handle ${corner}`;
     h.dataset.handle = corner;
+    h.title = 'Drag to resize (scales around the center)';
     handles.append(h);
   }
   const rot = document.createElement('span');
   rot.className = 'rot-handle';
   rot.dataset.handle = 'rotate';
+  rot.title = 'Drag to rotate (hold Shift to snap to 15°)';
   handles.append(rot);
   el.append(img, handles);
   return el;

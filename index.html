@@ -14,7 +14,7 @@
 
     <div id="ui">
       <div id="toolbar">
-        <span id="project-name"></span>
+        <span id="project-name" title="Current project — use Projects to switch or rename"></span>
         <button id="btn-add" title="Add images — or drop / paste them anywhere">+ Images</button>
         <button id="btn-save" title="Save the project now (it also autosaves after every change)">Save</button>
         <button id="btn-tilt" title="Keystone / tilt correction (T)">Tilt</button>
@@ -23,12 +23,12 @@
         <button id="btn-export" title="Export project as a portable file">Export</button>
         <button id="btn-projects" title="Back to the project list">Projects</button>
         <span id="sel-controls" hidden>
-          <label title="Layer opacity">◐ <input id="sel-opacity" type="range" min="0.05" max="1" step="0.05" /></label>
+          <label title="Layer opacity">◐ <input id="sel-opacity" type="range" min="0.05" max="1" step="0.05" title="Layer opacity — fade this image for tracing" /></label>
           <button id="btn-invert" title="Invert colors (I)">◑</button>
           <button id="btn-outline" title="Trace outline / colour edges (O)">⬚</button>
           <span id="outline-controls" hidden>
-            <label title="Edge sensitivity — lower shows more lines">⊿ <input id="ol-threshold" type="range" min="0.02" max="0.6" step="0.01" /></label>
-            <label title="Line thickness">≣ <input id="ol-thickness" type="range" min="0" max="4" step="1" /></label>
+            <label title="Edge sensitivity — lower shows more lines">⊿ <input id="ol-threshold" type="range" min="0.02" max="0.6" step="0.01" title="Edge sensitivity — lower shows more lines" /></label>
+            <label title="Line thickness">≣ <input id="ol-thickness" type="range" min="0" max="4" step="1" title="Outline line thickness" /></label>
             <input id="ol-color" type="color" title="Line colour" />
           </span>
           <button id="btn-lock" title="Freeze image in place (L)">🔓</button>
@@ -40,14 +40,14 @@
 
       <div id="keystone-panel" hidden>
         <h3>Tilt correction</h3>
-        <p class="hint">Enter your canvas size (any units — only the ratio matters) so artwork keeps its true proportions, then drag the ◆ corners onto the canvas. Turn on the Grid and adjust until its squares look square on the surface.</p>
-        <label>Canvas <span class="canvas-size"><input id="ks-canvasW" type="number" min="0" step="any" placeholder="screen" /> × <input id="ks-canvasH" type="number" min="0" step="any" placeholder="screen" /></span></label>
+        <p class="hint">Drag the four ◆ corners onto the canvas, then click <b>From pins</b> to infer its proportions so artwork keeps its true shape. For exactness, type the measured canvas size instead (any units — only the ratio matters). Turn on the Grid and adjust the sliders until its squares look square on the surface.</p>
+        <label title="Physical canvas size — only the width:height ratio matters">Canvas <span class="canvas-size"><input id="ks-canvasW" type="number" min="0" step="any" placeholder="screen" title="Canvas width (any unit — only the ratio matters)" /> × <input id="ks-canvasH" type="number" min="0" step="any" placeholder="screen" title="Canvas height (any unit — only the ratio matters)" /></span></label>
         <button id="ks-from-pins" title="Infer the canvas proportions from the pinned corner quad (best when the projector faces the canvas squarely; type measured sizes for exactness)">From pins</button>
-        <label>Tilt ↕ <input id="ks-rotX" type="range" min="-60" max="60" step="0.2" value="0" /></label>
-        <label>Tilt ↔ <input id="ks-rotY" type="range" min="-60" max="60" step="0.2" value="0" /></label>
-        <label>Rotate <input id="ks-rotZ" type="range" min="-45" max="45" step="0.2" value="0" /></label>
-        <label>Depth <input id="ks-persp" type="range" min="300" max="5000" step="10" value="1500" /></label>
-        <button id="ks-reset">Reset</button>
+        <label title="Tilt the projection up and down">Tilt ↕ <input id="ks-rotX" type="range" min="-60" max="60" step="0.2" value="0" title="Tilt the projection up and down" /></label>
+        <label title="Tilt the projection left and right">Tilt ↔ <input id="ks-rotY" type="range" min="-60" max="60" step="0.2" value="0" title="Tilt the projection left and right" /></label>
+        <label title="Rotate the projection within its plane">Rotate <input id="ks-rotZ" type="range" min="-45" max="45" step="0.2" value="0" title="Rotate the projection within its plane" /></label>
+        <label title="Perspective depth — lower exaggerates the keystone effect">Depth <input id="ks-persp" type="range" min="300" max="5000" step="10" value="1500" title="Perspective depth — lower exaggerates the keystone effect" /></label>
+        <button id="ks-reset" title="Reset all tilt, rotation, and perspective settings to default">Reset</button>
       </div>
 
       <div id="corners" hidden></div>
@@ -58,8 +58,8 @@
         <h1>Artograph</h1>
         <ul id="project-list"></ul>
         <div class="row">
-          <button id="btn-new">New project</button>
-          <button id="btn-import">Import .artograph</button>
+          <button id="btn-new" title="Create a new blank project">New project</button>
+          <button id="btn-import" title="Open a project from a .artograph file">Import .artograph</button>
         </div>
       </div>
     </div>

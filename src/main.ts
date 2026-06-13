@@ -60,6 +60,7 @@ async function showPicker(): Promise<void> {
       name.addEventListener('click', () => openProject(doc));
       const date = document.createElement('span');
       date.className = 'date';
+      date.title = 'Last saved';
       date.textContent = new Date(doc.savedAt).toLocaleString();
       li.append(name, date, ...pickerActions(doc));
       return li;
