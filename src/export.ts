@@ -77,6 +77,7 @@ export async function importProject(file: File): Promise<ProjectDoc> {
         z: num(l.z, i),
         opacity: Math.min(1, Math.max(0.05, num(l.opacity, 1))),
         locked: l.locked === true,
+        invert: l.invert === true,
       },
     ];
   });

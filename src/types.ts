@@ -18,6 +18,8 @@ export interface Layer {
   opacity: number;
   /** Frozen in place: geometry (move/scale/rotate) and deletion are blocked. */
   locked: boolean;
+  /** Render with colors inverted (negative) — useful for tracing. */
+  invert: boolean;
 }
 
 export interface KeystoneState {

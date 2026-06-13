@@ -61,6 +61,10 @@ body {
   background: rgb(245 158 11 / 45%);
 }
 
+#btn-invert.active {
+  background: rgb(59 130 246 / 55%);
+}
+
 /* Selection handles: counter-scaled via --k so they stay a constant
    on-screen size regardless of the layer's zoom. */
 .layer .handles {
@@ -136,6 +140,8 @@ body:not(.editing) #ui {
   left: 50%;
   transform: translateX(-50%);
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 6px;
   align-items: center;
   padding: 6px 10px;
@@ -143,7 +149,13 @@ body:not(.editing) #ui {
   background: rgb(20 20 24 / 82%);
   color: #fff;
   backdrop-filter: blur(6px);
-  white-space: nowrap;
+  /* Size to one row; wrap only when that would exceed the viewport.
+     (An absolutely-positioned flex-wrap box otherwise collapses to a
+     shrink-to-fit width and wraps prematurely.) */
+  width: max-content;
+  max-width: calc(100vw - 20px);
+  max-height: calc(100vh - 20px);
+  overflow-y: auto;
 }
 
 #project-name {
@@ -152,6 +164,7 @@ body:not(.editing) #ui {
   max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 #sel-controls {
@@ -189,6 +202,10 @@ button:hover {
   top: 64px;
   right: 12px;
   width: 260px;
+  max-width: calc(100vw - 24px);
+  /* Stay within the viewport regardless of height; scroll if it can't fit. */
+  max-height: calc(100vh - 76px);
+  overflow-y: auto;
   padding: 12px 14px;
   border-radius: 10px;
   background: rgb(20 20 24 / 82%);

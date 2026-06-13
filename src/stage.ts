@@ -71,6 +71,9 @@ export function renderStage(): void {
     el.style.transform = `translate(-50%, -50%) rotate(${layer.rotation}deg) scale(${layer.scale})`;
     el.style.zIndex = String(layer.z);
     el.style.opacity = String(layer.opacity);
+    // Invert on the <img> only, so selection handles aren't affected.
+    const img = el.querySelector('img');
+    if (img) img.style.filter = layer.invert ? 'invert(1)' : '';
     // Counter-scale so selection chrome keeps a constant on-screen size.
     el.style.setProperty('--k', String(1 / layer.scale));
     el.classList.toggle('selected', layer.id === app.selectedId);
@@ -121,6 +124,7 @@ export async function addImageFiles(files: Iterable<File>, at?: Pt): Promise<voi
       z: nextZ(),
       opacity: 1,
       locked: false,
+      invert: false,
     };
     project.layers.push(layer);
     app.selectedId = layer.id;
@@ -147,6 +151,14 @@ export function toggleLockSelected(): void {
   if (!layer) return;
   layer.locked = !layer.locked;
   toast(layer.locked ? 'Image frozen in place — press L to unfreeze' : 'Image unfrozen');
+  mutate();
+}
+
+/** Invert the selected layer's colors. Allowed even when locked (not geometry). */
+export function toggleInvertSelected(): void {
+  const layer = selectedLayer();
+  if (!layer) return;
+  layer.invert = !layer.invert;
   mutate();
 }
 

@@ -170,6 +170,21 @@ const s1 = await getScale();
 step(s1 > s0, `wheel zoom (${wheelVia})`, `scale ${s0} -> ${s1}`);
 await shot('03-dragged-scaled');
 
+// Invert colors (I): filter on the <img>, handles unaffected, toggles off again
+const imgFilter = () => page.$eval('.layer img', (el) => el.style.filter);
+await page.keyboard.press('i');
+await sleep(80);
+const fOn = await imgFilter();
+const invBtnActive = await page.$eval('#btn-invert', (el) => el.classList.contains('active'));
+await page.keyboard.press('i');
+await sleep(80);
+const fOff = await imgFilter();
+step(
+  fOn.includes('invert(1)') && invBtnActive && !fOff.includes('invert'),
+  'invert colors (I) toggles a CSS invert filter',
+  `filter on="${fOn}" btn active=${invBtnActive}, off="${fOff || '(none)'}"`,
+);
+
 // ---- 3. Tilt: sliders and corner drags warp the stage --------------------
 await page.click('#btn-tilt');
 await page.waitForSelector('#keystone-panel:not([hidden])');
@@ -449,6 +464,25 @@ step(
   `after dup: [${namesAfterDup}]; after del: [${namesAfterDel}]`,
 );
 await shot('07-picker-final');
+
+// Probe: tilt panel stays within a short viewport (never exceeds it)
+await page.$$eval('#project-list .name', (els) => els.find((e) => e.textContent === 'Mural test').click());
+await page.waitForSelector('body.editing');
+await page.setViewport({ width: 900, height: 360 });
+await page.click('#btn-tilt');
+await page.waitForSelector('#keystone-panel:not([hidden])');
+await sleep(120);
+const panelBox = await page.$eval('#keystone-panel', (el) => {
+  const r = el.getBoundingClientRect();
+  return { top: r.top, bottom: r.bottom, right: r.right, left: r.left };
+});
+const withinViewport = panelBox.bottom <= 360 + 1 && panelBox.right <= 900 + 1 && panelBox.top >= -1 && panelBox.left >= -1;
+step(
+  withinViewport,
+  'PROBE tilt panel stays within a short (900x360) viewport',
+  `panel box top=${panelBox.top | 0} bottom=${panelBox.bottom | 0} right=${panelBox.right | 0} (viewport 900x360)`,
+);
+await page.setViewport({ width: 1280, height: 800 });
 
 await browser.close();
 const fails = results.filter((r) => !r.ok).length;

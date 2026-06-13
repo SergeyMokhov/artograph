@@ -29,10 +29,12 @@ build the single file yourself (see [Development](#development)) and open
 3. **Arrange**: drag to move; mouse-wheel over an image to scale it around the
    cursor; use the corner handles to resize and the round top handle to rotate
    (hold <kbd>Shift</kbd> to snap to 15°). Selected images get opacity and
-   z-order controls in the toolbar. Once an image sits right, **freeze it in
-   place** (🔓 button or <kbd>L</kbd>) so you can't nudge it while arranging
-   the others — frozen images show an amber dashed outline when selected and
-   ignore move/scale/rotate/delete until unfrozen.
+   z-order controls in the toolbar, plus **invert colors** (◑ button or
+   <kbd>I</kbd>) — handy for tracing a light drawing as dark lines, or vice
+   versa. Once an image sits right, **freeze it in place** (🔓 button or
+   <kbd>L</kbd>) so you can't nudge it while arranging the others — frozen
+   images show an amber dashed outline when selected and ignore
+   move/scale/rotate/delete until unfrozen.
 4. **Project & calibrate**: press <kbd>F</kbd> for fullscreen on the projector.
    Open **Tilt** (<kbd>T</kbd>), drag the four ◆ corner pins onto the canvas
    corners, then click **From pins** — the app infers the canvas's proportions
@@ -61,6 +63,7 @@ build the single file yourself (see [Development](#development)) and open
 | <kbd>←→↑↓</kbd> | Nudge selected image 1 px (<kbd>Shift</kbd>: 10 px) |
 | <kbd>[</kbd> / <kbd>]</kbd> | Send backward / bring forward |
 | <kbd>L</kbd> | Freeze / unfreeze selected image in place |
+| <kbd>I</kbd> | Invert the selected image's colors |
 | <kbd>Delete</kbd> | Remove selected image |
 | <kbd>Esc</kbd> | Deselect |
 

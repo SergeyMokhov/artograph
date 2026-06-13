@@ -100,6 +100,7 @@ export async function createDemoProject(): Promise<ProjectDoc> {
     z: 1,
     opacity: 1,
     locked: false,
+    invert: false,
   });
   await saveProject(doc);
   return doc;

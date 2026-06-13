@@ -3,7 +3,7 @@ import { DEMO_ID, createDemoProject, ensureDemoProject } from './demo';
 import { exportProject, importProject } from './export';
 import { initInteractions } from './interactions';
 import { applyKeystone, initKeystone, toggleCalibrate } from './keystone';
-import { addImageFiles, deleteSelected, releaseImageURLs, renderStage, reorderSelected, selectedLayer, toggleLockSelected } from './stage';
+import { addImageFiles, deleteSelected, releaseImageURLs, renderStage, reorderSelected, selectedLayer, toggleInvertSelected, toggleLockSelected } from './stage';
 import { app, mutate, subscribe } from './state';
 import { deleteProject, listProjects, saveProject } from './store';
 import { errMsg, toast } from './toast';
@@ -137,6 +137,7 @@ function updateToolbar(): void {
     lockBtn.textContent = sel.locked ? '🔒' : '🔓';
     lockBtn.title = sel.locked ? 'Unfreeze image (L)' : 'Freeze image in place (L)';
     lockBtn.classList.toggle('active', sel.locked === true);
+    $<HTMLButtonElement>('#btn-invert').classList.toggle('active', sel.invert === true);
   }
 }
 
@@ -186,6 +187,7 @@ function initToolbar(): void {
     sel.opacity = parseFloat((e.target as HTMLInputElement).value);
     mutate();
   });
+  $('#btn-invert').addEventListener('click', toggleInvertSelected);
   $('#btn-lock').addEventListener('click', toggleLockSelected);
   $('#btn-del').addEventListener('click', deleteSelected);
   $('#btn-front').addEventListener('click', () => reorderSelected(1));
