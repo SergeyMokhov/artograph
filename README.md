@@ -31,7 +31,10 @@ build the single file yourself (see [Development](#development)) and open
    (hold <kbd>Shift</kbd> to snap to 15°). Selected images get opacity and
    z-order controls in the toolbar, plus **invert colors** (◑ button or
    <kbd>I</kbd>) — handy for tracing a light drawing as dark lines, or vice
-   versa. Once an image sits right, **freeze it in place** (🔓 button or
+   versa — and **Outline** (⬚ button or <kbd>O</kbd>), which replaces the image
+   with bright edge lines for daylight tracing (see
+   [Outline / edge tracing](#outline--edge-tracing)). Once an image sits right,
+   **freeze it in place** (🔓 button or
    <kbd>L</kbd>) so you can't nudge it while arranging the others — frozen
    images show an amber dashed outline when selected and ignore
    move/scale/rotate/delete until unfrozen.
@@ -53,6 +56,31 @@ build the single file yourself (see [Development](#development)) and open
 
 ![Corner pins on a portrait canvas with the tilt panel and calibration grid; only what is inside the pinned quad lands on the canvas](docs/tilt-calibration.png)
 
+## Outline / edge tracing
+
+In daylight the projected image can wash out, so the full-colour photo is hard
+to follow on the canvas. Select an image and turn on **Outline** (⬚ button or
+<kbd>O</kbd>) to replace it with bright, high-contrast edge lines — the object's
+silhouette plus its interior colour boundaries — that read clearly even with the
+room lights on.
+
+![A photo replaced by its bright magenta outline, with the outline threshold, thickness, and colour controls in the toolbar](docs/outline-trace.png)
+
+Three per-image controls appear next to the button while it is on:
+
+- **⊿ Threshold** — edge sensitivity. Lower shows more lines (fine detail and
+  texture); raise it for a cleaner silhouette. It is relative to each image's
+  strongest edge, so faint, low-contrast photos still surface their best lines.
+- **≣ Thickness** — line weight, for visibility from across the room.
+- **Colour** — the line colour; pick whatever contrasts best with your subject
+  and canvas (the default is magenta).
+
+The effect detects edges across brightness **and** colour (and the alpha edge of
+a cut-out PNG), so an equal-brightness boundary like green→yellow still registers
+as a line. It is computed once per setting and cached, persists in the project,
+and travels with `.artograph` export/import. Outline can be combined with
+**invert** and opacity, and it is allowed on a frozen image.
+
 ## Keyboard shortcuts
 
 | Key | Action |
@@ -64,6 +92,7 @@ build the single file yourself (see [Development](#development)) and open
 | <kbd>[</kbd> / <kbd>]</kbd> | Send backward / bring forward |
 | <kbd>L</kbd> | Freeze / unfreeze selected image in place |
 | <kbd>I</kbd> | Invert the selected image's colors |
+| <kbd>O</kbd> | Outline / edge-trace the selected image |
 | <kbd>Delete</kbd> | Remove selected image |
 | <kbd>Esc</kbd> | Deselect |
 
@@ -108,6 +137,7 @@ so it runs from a `file://` URL.
 | `src/homography.ts` | 4-point homography ↔ `matrix3d` (pure, unit-tested) |
 | `src/keystone.ts` | Tilt state → stage transform, corner pins, sliders |
 | `src/stage.ts` | Layer rendering, image ingest, selection |
+| `src/outline.ts` | Edge detection for the Outline effect (canvas, no deps) |
 | `src/interactions.ts` | Pointer/wheel/keyboard editing |
 | `src/store.ts` | IndexedDB persistence, content-hash image dedup + GC |
 | `src/export.ts` | `.artograph` export/import |
@@ -122,5 +152,8 @@ node scripts/verify-e2e.mjs
 
 ## Roadmap
 
-- Image-editing tools for tracing (edge detection, posterize,
-  brightness/contrast) as a Rust → WebAssembly module.
+- **HEIC/HEIF import** — transcode iPhone photos to a browser-renderable format
+  at ingest (bundling a WebAssembly decoder).
+- More tracing aids beyond the shipped **Outline** tool: posterize and
+  brightness/contrast, likely as a Rust → WebAssembly module for the heavier
+  pixel work.
