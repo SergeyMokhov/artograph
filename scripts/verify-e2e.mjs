@@ -189,6 +189,46 @@ step(
 const panelShown = await page.$eval('#image-panel', (el) => !el.hidden);
 step(panelShown, 'image panel shows for the selected image', `#image-panel visible=${panelShown}`);
 
+// No horizontal scrollbar: every row (with Outline controls and a wide stretch
+// value in play — the widest states) must fit inside the panel width.
+await page.keyboard.press('o'); // outline on
+await page.evaluate(() => {
+  const s = document.getElementById('sel-stretchX');
+  s.value = '1.65';
+  s.dispatchEvent(new Event('input', { bubbles: true }));
+});
+await sleep(120);
+const fit = await page.evaluate(() => {
+  const panel = document.getElementById('image-panel');
+  const overRows = [...panel.children].filter((c) => c.scrollWidth - c.clientWidth > 0).map((c) => c.id || c.className);
+  return { panelOver: panel.scrollWidth - panel.clientWidth, overRows };
+});
+step(fit.panelOver === 0 && fit.overRows.length === 0, 'image panel has no horizontal overflow (no scrollbar)', `panel overflow=${fit.panelOver}px; overflowing rows=[${fit.overRows}]`);
+await page.keyboard.press('o'); // outline off
+await page.click('#btn-stretch-reset'); // stretch back to 1×1
+
+// Drag the panel by its title bar to a new spot; it must move and persist.
+const panelBefore = await page.$eval('#image-panel', (el) => el.getBoundingClientRect().toJSON());
+const h3rect = await page.$eval('#image-panel h3', (el) => el.getBoundingClientRect().toJSON());
+const grab = { x: h3rect.x + 30, y: h3rect.y + h3rect.height / 2 };
+await page.mouse.move(grab.x, grab.y);
+await page.mouse.down();
+await page.mouse.move(grab.x + 300, grab.y + 200, { steps: 8 });
+await page.mouse.up();
+await sleep(60);
+const panelAfter = await page.$eval('#image-panel', (el) => el.getBoundingClientRect().toJSON());
+const movedPanel = Math.abs(panelAfter.x - (panelBefore.x + 300)) < 4 && Math.abs(panelAfter.y - (panelBefore.y + 200)) < 4;
+const persisted = await page.evaluate(() => !!localStorage.getItem('artograph.imagePanelPos'));
+step(movedPanel && persisted, 'image panel drags freely and remembers its position', `(${panelBefore.x | 0},${panelBefore.y | 0}) -> (${panelAfter.x | 0},${panelAfter.y | 0}); persisted=${persisted}`);
+// Put it back so later screenshots/layout are unaffected.
+const h3after = await page.$eval('#image-panel h3', (el) => el.getBoundingClientRect().toJSON());
+const g2 = { x: h3after.x + 30, y: h3after.y + h3after.height / 2 };
+await page.mouse.move(g2.x, g2.y);
+await page.mouse.down();
+await page.mouse.move(g2.x - 300, g2.y - 200, { steps: 8 });
+await page.mouse.up();
+await sleep(60);
+
 const setField = (id, value, evt) =>
   page.evaluate((id, value, evt) => {
     const el = document.getElementById(id);
@@ -543,6 +583,48 @@ step(
   `panel box top=${panelBox.top | 0} bottom=${panelBox.bottom | 0} right=${panelBox.right | 0} (viewport 900x360)`,
 );
 await page.setViewport({ width: 1280, height: 800 });
+
+// Probe: the same image imported twice stays individually selectable.
+await page.click('#btn-projects');
+await page.waitForSelector('#picker');
+page.once('dialog', (d) => d.accept('Dup test'));
+await page.click('#btn-new');
+await page.waitForSelector('body.editing');
+const addSame = async () => {
+  await page.evaluate(async (url) => {
+    const blob = await (await fetch(url)).blob();
+    const dt = new DataTransfer();
+    dt.items.add(new File([blob], 'dup.png', { type: 'image/png' }));
+    const i = document.getElementById('file-input');
+    i.files = dt.files;
+    i.dispatchEvent(new Event('change'));
+  }, dataURL);
+};
+await addSame();
+await sleep(200);
+await addSame();
+await sleep(250);
+const dupLayers = await page.$$eval('.layer', (els) => els.map((e) => ({ id: e.dataset.id, left: e.style.left, top: e.style.top })));
+const cascaded = dupLayers.length === 2 && (dupLayers[0].left !== dupLayers[1].left || dupLayers[0].top !== dupLayers[1].top);
+// Click in the overlap: plain click takes the top, Alt-click reaches beneath.
+const rr = await page.$$eval('.layer', (els) => els.map((e) => e.getBoundingClientRect().toJSON()));
+const ix1 = Math.max(rr[0].x, rr[1].x);
+const iy1 = Math.max(rr[0].y, rr[1].y);
+const ix2 = Math.min(rr[0].x + rr[0].width, rr[1].x + rr[1].width);
+const iy2 = Math.min(rr[0].y + rr[0].height, rr[1].y + rr[1].height);
+const op = { x: (ix1 + ix2) / 2, y: (iy1 + iy2) / 2 };
+const selId = () => page.evaluate(() => document.querySelector('.layer.selected')?.dataset.id ?? null);
+await page.mouse.click(op.x, op.y);
+const selTop = await selId();
+await page.keyboard.down('Alt');
+await page.mouse.click(op.x, op.y);
+await page.keyboard.up('Alt');
+const selUnder = await selId();
+step(
+  cascaded && !!selTop && !!selUnder && selTop !== selUnder,
+  'same image imported twice is individually selectable (cascade + Alt-click)',
+  `layers=${dupLayers.length} cascaded=${cascaded}; top=${(selTop || '').slice(0, 6)} alt->under=${(selUnder || '').slice(0, 6)}`,
+);
 
 await browser.close();
 const fails = results.filter((r) => !r.ok).length;

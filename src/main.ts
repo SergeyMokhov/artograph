@@ -297,6 +297,86 @@ function initPicker(): void {
 }
 
 // ---------------------------------------------------------------------------
+// Draggable panels: grab a panel by its title bar and move it anywhere. The
+// position is remembered (localStorage) and re-clamped into view on resize.
+
+function initDraggablePanel(panelSel: string, storageKey: string): void {
+  const panel = $(panelSel);
+  const handle = panel.querySelector('h3');
+  if (!handle) return;
+
+  const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
+  const M = 8;
+  const place = (left: number, top: number) => {
+    // Keep the panel within the viewport; if it's taller/wider than the
+    // viewport, pin to the top-left margin rather than pushing it off-screen.
+    const maxLeft = Math.max(M, window.innerWidth - panel.offsetWidth - M);
+    const maxTop = Math.max(M, window.innerHeight - panel.offsetHeight - M);
+    panel.style.left = `${clamp(left, M, maxLeft)}px`;
+    panel.style.top = `${clamp(top, M, maxTop)}px`;
+    panel.style.right = 'auto';
+  };
+
+  const save = () => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({ left: panel.offsetLeft, top: panel.offsetTop }));
+    } catch {
+      /* storage may be unavailable (private mode); position just won't persist */
+    }
+  };
+
+  // Restore a saved position. The panel is hidden at startup, so it has no
+  // layout box yet — reveal it off-screen briefly to measure, then place it.
+  const restore = () => {
+    let saved: { left: number; top: number } | null = null;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) saved = JSON.parse(raw) as { left: number; top: number };
+    } catch {
+      /* ignore */
+    }
+    if (!saved) return;
+    const wasHidden = panel.hidden;
+    if (wasHidden) {
+      panel.style.visibility = 'hidden';
+      panel.hidden = false;
+    }
+    place(saved.left, saved.top);
+    if (wasHidden) {
+      panel.hidden = true;
+      panel.style.visibility = '';
+    }
+  };
+
+  handle.addEventListener('pointerdown', (e) => {
+    const ev = e as PointerEvent;
+    if (ev.button !== 0) return;
+    ev.preventDefault();
+    const rect = panel.getBoundingClientRect();
+    const dx = ev.clientX - rect.left;
+    const dy = ev.clientY - rect.top;
+    // Listen on window (like the corner/layer drags) so the drag keeps up even
+    // when the pointer leaves the small title bar.
+    const onMove = (m: PointerEvent) => place(m.clientX - dx, m.clientY - dy);
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      save();
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  });
+
+  window.addEventListener('resize', () => {
+    // Only re-clamp a panel the user has moved and that is currently laid out
+    // (a hidden panel reports offset 0, which would wrongly snap it to 0,0).
+    if (panel.style.left && !panel.hidden) place(panel.offsetLeft, panel.offsetTop);
+  });
+
+  restore();
+}
+
+// ---------------------------------------------------------------------------
 // Projection mode: hide all chrome (and the cursor) after a few idle seconds.
 
 function initIdleHide(): void {
@@ -325,6 +405,7 @@ initInteractions();
 initToolbar();
 initPicker();
 initIdleHide();
+initDraggablePanel('#image-panel', 'artograph.imagePanelPos');
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') void flushSave();

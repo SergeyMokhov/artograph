@@ -28,7 +28,9 @@ build the single file yourself (see [Development](#development)) and open
    whatever is underneath.
 3. **Arrange**: drag to move; mouse-wheel over an image to scale it around the
    cursor; use the corner handles to resize and the round top handle to rotate
-   (hold <kbd>Shift</kbd> to snap to 15°). Selecting an image opens a contextual
+   (hold <kbd>Shift</kbd> to snap to 15°). Click to select the top image under
+   the cursor; <kbd>Alt</kbd>+click cycles to the one stacked beneath (handy
+   when the same image is imported twice). Selecting an image opens a contextual
    **Image** panel on the left with all of its per-image settings, grouped:
    - **Layer** — the stacking number shown between the ▼/▲ (send-backward /
      bring-forward) buttons. Type it directly; higher sits in front, negatives
@@ -97,6 +99,7 @@ and travels with `.artograph` export/import. Outline can be combined with
 | <kbd>F</kbd> | Fullscreen |
 | <kbd>G</kbd> | Calibration grid |
 | <kbd>T</kbd> | Tilt-correction panel |
+| <kbd>Alt</kbd>+click | Select the image stacked directly beneath (cycles through overlapping images) |
 | <kbd>←→↑↓</kbd> | Nudge selected image 1 px (<kbd>Shift</kbd>: 10 px) |
 | <kbd>[</kbd> / <kbd>]</kbd> | Send backward / bring forward |
 | <kbd>L</kbd> | Freeze / unfreeze selected image in place |
