@@ -96,6 +96,8 @@ export async function createDemoProject(): Promise<ProjectDoc> {
     x: window.innerWidth / 2,
     y: window.innerHeight / 2,
     scale: Math.min(1, (0.85 * window.innerWidth) / W, (0.85 * window.innerHeight) / H),
+    stretchX: 1,
+    stretchY: 1,
     rotation: 0,
     z: 1,
     opacity: 1,

@@ -110,9 +110,13 @@ export function renderStage(): void {
       el = createLayerEl(layer);
       layersEl.append(el);
     }
+    const sx = layer.stretchX ?? 1;
+    const sy = layer.stretchY ?? 1;
+    // Keep the single-argument form when unstretched (the common case).
+    const scale = sx === 1 && sy === 1 ? `scale(${layer.scale})` : `scale(${layer.scale * sx}, ${layer.scale * sy})`;
     el.style.left = `${layer.x}px`;
     el.style.top = `${layer.y}px`;
-    el.style.transform = `translate(-50%, -50%) rotate(${layer.rotation}deg) scale(${layer.scale})`;
+    el.style.transform = `translate(-50%, -50%) rotate(${layer.rotation}deg) ${scale}`;
     el.style.zIndex = String(layer.z);
     el.style.opacity = String(layer.opacity);
     // Invert on the <img> only, so selection handles aren't affected.
@@ -122,6 +126,9 @@ export function renderStage(): void {
       resolveLayerSrc(img, layer);
     }
     // Counter-scale so selection chrome keeps a constant on-screen size.
+    // Split per-axis so handles stay square even when the image is stretched.
+    el.style.setProperty('--kx', String(1 / (layer.scale * sx)));
+    el.style.setProperty('--ky', String(1 / (layer.scale * sy)));
     el.style.setProperty('--k', String(1 / layer.scale));
     el.classList.toggle('selected', layer.id === app.selectedId);
     el.classList.toggle('locked', layer.locked === true);
@@ -167,6 +174,8 @@ export async function addImageFiles(files: Iterable<File>, at?: Pt): Promise<voi
       x: pt.x,
       y: pt.y,
       scale,
+      stretchX: 1,
+      stretchY: 1,
       rotation: 0,
       z: nextZ(),
       opacity: 1,
@@ -221,16 +230,63 @@ export function toggleOutlineSelected(): void {
   mutate();
 }
 
-/** Move the selected layer one step forward (+1) or backward (-1) in z-order. */
+/**
+ * Change the selected layer's number (z) by one step: forward (+1) or
+ * backward (-1). The number is a direct, editable value — negatives allowed —
+ * so this simply increments it rather than swapping with a neighbour.
+ */
 export function reorderSelected(dir: 1 | -1): void {
-  const project = app.project;
   const layer = selectedLayer();
-  if (!project || !layer) return;
-  const sorted = [...project.layers].sort((a, b) => a.z - b.z);
-  const i = sorted.indexOf(layer);
-  const neighbor = sorted[i + dir];
-  if (!neighbor) return;
-  [layer.z, neighbor.z] = [neighbor.z, layer.z];
+  if (!layer) return;
+  layer.z += dir;
+  mutate();
+}
+
+/** Set the selected layer's number (z) directly. Negatives allowed; NaN → 0. */
+export function setLayerZ(z: number): void {
+  const layer = selectedLayer();
+  if (!layer) return;
+  layer.z = Number.isFinite(z) ? Math.round(z) : 0;
+  mutate();
+}
+
+/** Set the selected layer's non-uniform stretch factors (default 1 = square). */
+export function setStretch(axis: 'x' | 'y', value: number): void {
+  const layer = selectedLayer();
+  if (!layer || layer.locked) return;
+  const v = Number.isFinite(value) && value > 0 ? value : 1;
+  if (axis === 'x') layer.stretchX = v;
+  else layer.stretchY = v;
+  mutate();
+}
+
+/** Reset the selected layer's stretch back to square (1 × 1). */
+export function resetStretch(): void {
+  const layer = selectedLayer();
+  if (!layer || layer.locked) return;
+  layer.stretchX = 1;
+  layer.stretchY = 1;
+  mutate();
+}
+
+/** Center the selected image on the canvas (the projected source rectangle). */
+export function centerSelectedOnCanvas(): void {
+  const layer = selectedLayer();
+  if (!layer || layer.locked) return;
+  // Layers live in untransformed stage coordinates; the canvas source rect is
+  // centered in the viewport, so its center is simply the viewport center.
+  layer.x = window.innerWidth / 2;
+  layer.y = window.innerHeight / 2;
+  mutate();
+}
+
+/** Center the selected image on top of another image (shared center point). */
+export function centerSelectedOnLayer(targetId: string): void {
+  const layer = selectedLayer();
+  const target = app.project?.layers.find((l) => l.id === targetId);
+  if (!layer || layer.locked || !target || target.id === layer.id) return;
+  layer.x = target.x;
+  layer.y = target.y;
   mutate();
 }
 

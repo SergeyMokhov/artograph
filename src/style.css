@@ -70,17 +70,27 @@ body {
 }
 
 #outline-controls {
-  display: inline-flex;
-  gap: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   align-items: center;
+  margin: 9px 0;
+  padding-top: 9px;
+  border-top: 1px solid rgb(255 255 255 / 12%);
 }
 
 #outline-controls[hidden] {
   display: none;
 }
 
+#outline-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 #outline-controls input[type='range'] {
-  width: 64px;
+  width: 96px;
 }
 
 #outline-controls input[type='color'] {
@@ -106,8 +116,10 @@ body {
 .handle,
 .rot-handle {
   position: absolute;
-  width: calc(14px * var(--k, 1));
-  height: calc(14px * var(--k, 1));
+  /* Per-axis counter-scale keeps handles square even when the image is
+     stretched (--kx/--ky), falling back to the uniform --k. */
+  width: calc(14px * var(--kx, var(--k, 1)));
+  height: calc(14px * var(--ky, var(--k, 1)));
   background: #fff;
   border: calc(1.5px * var(--k, 1)) solid #3b82f6;
   border-radius: 3px;
@@ -195,20 +207,106 @@ body:not(.editing) #ui {
   white-space: nowrap;
 }
 
-#sel-controls {
+/* --------------------------------------------------- image (selected) panel */
+
+#image-panel {
+  left: 12px;
+}
+
+#image-panel .grp {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 9px 0;
+}
+
+/* Separate logical groups with a hairline so they scan as distinct blocks. */
+#image-panel .grp + .grp {
+  padding-top: 9px;
+  border-top: 1px solid rgb(255 255 255 / 12%);
+}
+
+#image-panel .grp-label {
+  color: #bbb;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+#image-panel input[type='range'] {
+  width: 150px;
+}
+
+/* Layer-number stepper: [▼] [n] [▲] as one segmented control. */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stepper button {
+  padding: 4px 9px;
+}
+
+.stepper input[type='number'] {
+  width: 56px;
+  text-align: center;
+}
+
+.stretch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stretch label {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.stretch input[type='number'] {
+  width: 46px;
+}
+
+#btn-stretch-reset {
+  padding: 4px 8px;
+}
+
+.center-controls,
+.effects {
   display: inline-flex;
   gap: 6px;
   align-items: center;
-  padding-left: 8px;
-  border-left: 1px solid rgb(255 255 255 / 25%);
 }
 
-#sel-controls[hidden] {
-  display: none;
+#center-on {
+  font: inherit;
+  max-width: 130px;
+  padding: 4px 6px;
+  border: none;
+  border-radius: 7px;
+  background: rgb(255 255 255 / 12%);
+  color: inherit;
+  cursor: pointer;
 }
 
-#sel-controls input[type='range'] {
-  width: 90px;
+#center-on:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+#image-panel .actions {
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+#image-panel .actions #btn-del {
+  background: rgb(220 38 38 / 45%);
+}
+
+#image-panel .actions #btn-del:hover {
+  background: rgb(220 38 38 / 65%);
 }
 
 button {
@@ -225,10 +323,11 @@ button:hover {
   background: rgb(255 255 255 / 24%);
 }
 
-#keystone-panel {
+/* Shared chrome for the floating side panels (Tilt on the right, Image on
+   the left). Each panel sets only its own horizontal edge. */
+.panel {
   position: absolute;
   top: 64px;
-  right: 12px;
   width: 260px;
   max-width: calc(100vw - 24px);
   /* Stay within the viewport regardless of height; scroll if it can't fit. */
@@ -241,7 +340,15 @@ button:hover {
   backdrop-filter: blur(6px);
 }
 
-#keystone-panel h3 {
+.panel[hidden] {
+  display: none;
+}
+
+#keystone-panel {
+  right: 12px;
+}
+
+.panel h3 {
   margin: 0 0 6px;
   font-size: 15px;
 }
@@ -264,7 +371,7 @@ button:hover {
   width: 160px;
 }
 
-#keystone-panel input[type='number'] {
+.panel input[type='number'] {
   width: 62px;
   padding: 3px 6px;
   border: none;
@@ -289,6 +396,13 @@ button:hover {
   border: 2px solid #fff;
   box-shadow: 0 0 5px rgb(0 0 0 / 50%);
   cursor: move;
+}
+
+/* While dragging a tilt corner, hide the OS cursor everywhere so the diamond
+   handle itself acts as the pointer and doesn't get covered up. */
+body.corner-dragging,
+body.corner-dragging * {
+  cursor: none !important;
 }
 
 /* -------------------------------------------------- projection (idle) */

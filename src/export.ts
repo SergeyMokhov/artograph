@@ -88,6 +88,8 @@ export async function importProject(file: File): Promise<ProjectDoc> {
         x: num(l.x, window.innerWidth / 2),
         y: num(l.y, window.innerHeight / 2),
         scale: num(l.scale, 1),
+        stretchX: Math.max(0.05, num(l.stretchX, 1)),
+        stretchY: Math.max(0.05, num(l.stretchY, 1)),
         rotation: num(l.rotation, 0),
         z: num(l.z, i),
         opacity: Math.min(1, Math.max(0.05, num(l.opacity, 1))),

@@ -22,23 +22,67 @@
         <button id="btn-full" title="Fullscreen (F)">Fullscreen</button>
         <button id="btn-export" title="Export project as a portable file">Export</button>
         <button id="btn-projects" title="Back to the project list">Projects</button>
-        <span id="sel-controls" hidden>
-          <label title="Layer opacity">◐ <input id="sel-opacity" type="range" min="0.05" max="1" step="0.05" title="Layer opacity — fade this image for tracing" /></label>
-          <button id="btn-invert" title="Invert colors (I)">◑</button>
-          <button id="btn-outline" title="Trace outline / colour edges (O)">⬚</button>
-          <span id="outline-controls" hidden>
-            <label title="Edge sensitivity — lower shows more lines">⊿ <input id="ol-threshold" type="range" min="0.02" max="0.6" step="0.01" title="Edge sensitivity — lower shows more lines" /></label>
-            <label title="Line thickness">≣ <input id="ol-thickness" type="range" min="0" max="4" step="1" title="Outline line thickness" /></label>
-            <input id="ol-color" type="color" title="Line colour" />
-          </span>
-          <button id="btn-lock" title="Freeze image in place (L)">🔓</button>
-          <button id="btn-back" title="Send backward ([)">▼</button>
-          <button id="btn-front" title="Bring forward (])">▲</button>
-          <button id="btn-del" title="Delete layer (Del)">✕</button>
-        </span>
       </div>
 
-      <div id="keystone-panel" hidden>
+      <!-- Contextual settings for the selected image. Appears only when an
+           image is selected; groups are labelled and separated for scanning. -->
+      <div id="image-panel" class="panel" hidden>
+        <h3>Image</h3>
+
+        <div class="grp">
+          <span class="grp-label">Layer</span>
+          <span class="stepper" title="Layer number — higher sits in front; negatives allowed">
+            <button id="btn-back" title="Send backward ([)">▼</button>
+            <input id="sel-z" type="number" step="1" title="Layer number — higher is in front; negatives allowed" />
+            <button id="btn-front" title="Bring forward (])">▲</button>
+          </span>
+        </div>
+
+        <div class="grp">
+          <span class="grp-label">Stretch</span>
+          <span class="stretch">
+            <label title="Horizontal stretch — pull the image wider or narrower">↔ <input id="sel-stretchX" type="number" min="0.05" step="0.05" title="Horizontal stretch (1 = original)" /></label>
+            <label title="Vertical stretch — pull the image taller or shorter">↕ <input id="sel-stretchY" type="number" min="0.05" step="0.05" title="Vertical stretch (1 = original)" /></label>
+            <button id="btn-stretch-reset" title="Reset stretch back to square (1 × 1)">⟲</button>
+          </span>
+        </div>
+
+        <div class="grp">
+          <span class="grp-label">Center</span>
+          <span class="center-controls">
+            <button id="btn-center" title="Center this image on the canvas">Canvas</button>
+            <select id="center-on" title="Center this image on top of another image">
+              <option value="">On image…</option>
+            </select>
+          </span>
+        </div>
+
+        <div class="grp">
+          <label class="grp-label" for="sel-opacity">Opacity</label>
+          <input id="sel-opacity" type="range" min="0.05" max="1" step="0.05" title="Layer opacity — fade this image for tracing" />
+        </div>
+
+        <div class="grp">
+          <span class="grp-label">Effects</span>
+          <span class="effects">
+            <button id="btn-invert" title="Invert colors (I)">◑ Invert</button>
+            <button id="btn-outline" title="Trace outline / colour edges (O)">⬚ Outline</button>
+          </span>
+        </div>
+
+        <div id="outline-controls" hidden>
+          <label title="Edge sensitivity — lower shows more lines">⊿ <input id="ol-threshold" type="range" min="0.02" max="0.6" step="0.01" title="Edge sensitivity — lower shows more lines" /></label>
+          <label title="Line thickness">≣ <input id="ol-thickness" type="range" min="0" max="4" step="1" title="Outline line thickness" /></label>
+          <label title="Line colour">🖌 <input id="ol-color" type="color" title="Line colour" /></label>
+        </div>
+
+        <div class="grp actions">
+          <button id="btn-lock" title="Freeze image in place (L)">🔓 Freeze</button>
+          <button id="btn-del" title="Delete layer (Del)">✕ Delete</button>
+        </div>
+      </div>
+
+      <div id="keystone-panel" class="panel" hidden>
         <h3>Tilt correction</h3>
         <p class="hint">Drag the four ◆ corners onto the canvas, then click <b>From pins</b> to infer its proportions so artwork keeps its true shape. For exactness, type the measured canvas size instead (any units — only the ratio matters). Turn on the Grid and adjust the sliders until its squares look square on the surface.</p>
         <label title="Physical canvas size — only the width:height ratio matters">Canvas <span class="canvas-size"><input id="ks-canvasW" type="number" min="0" step="any" placeholder="screen" title="Canvas width (any unit — only the ratio matters)" /> × <input id="ks-canvasH" type="number" min="0" step="any" placeholder="screen" title="Canvas height (any unit — only the ratio matters)" /></span></label>

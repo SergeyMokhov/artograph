@@ -28,19 +28,28 @@ build the single file yourself (see [Development](#development)) and open
    whatever is underneath.
 3. **Arrange**: drag to move; mouse-wheel over an image to scale it around the
    cursor; use the corner handles to resize and the round top handle to rotate
-   (hold <kbd>Shift</kbd> to snap to 15°). Selected images get opacity and
-   z-order controls in the toolbar, plus **invert colors** (◑ button or
-   <kbd>I</kbd>) — handy for tracing a light drawing as dark lines, or vice
-   versa — and **Outline** (⬚ button or <kbd>O</kbd>), which replaces the image
-   with bright edge lines for daylight tracing (see
-   [Outline / edge tracing](#outline--edge-tracing)). Once an image sits right,
-   **freeze it in place** (🔓 button or
-   <kbd>L</kbd>) so you can't nudge it while arranging the others — frozen
-   images show an amber dashed outline when selected and ignore
-   move/scale/rotate/delete until unfrozen.
+   (hold <kbd>Shift</kbd> to snap to 15°). Selecting an image opens a contextual
+   **Image** panel on the left with all of its per-image settings, grouped:
+   - **Layer** — the stacking number shown between the ▼/▲ (send-backward /
+     bring-forward) buttons. Type it directly; higher sits in front, negatives
+     are allowed, and the buttons step it by one.
+   - **Stretch** — independent ↔ (horizontal) and ↕ (vertical) factors so an
+     image can be pulled out of square (wider than tall or the reverse); ⟲
+     resets to 1 × 1. Uniform sizing still comes from the handles / wheel.
+   - **Center** — **Canvas** drops the image on the canvas center; the
+     **On image…** menu centers it on top of another image (shared center).
+   - **Opacity**, **invert colors** (◑ or <kbd>I</kbd>) — handy for tracing a
+     light drawing as dark lines, or vice versa — and **Outline** (⬚ or
+     <kbd>O</kbd>), which replaces the image with bright edge lines for daylight
+     tracing (see [Outline / edge tracing](#outline--edge-tracing)).
+   - **Freeze** (🔓 or <kbd>L</kbd>) locks an image in place so you can't nudge
+     it while arranging the others — frozen images show an amber dashed outline
+     when selected and ignore move/scale/rotate/delete until unfrozen — and
+     **Delete** (✕ or <kbd>Delete</kbd>) removes it.
 4. **Project & calibrate**: press <kbd>F</kbd> for fullscreen on the projector.
    Open **Tilt** (<kbd>T</kbd>), drag the four ◆ corner pins onto the canvas
-   corners, then click **From pins** — the app infers the canvas's proportions
+   corners (the mouse cursor hides while you drag so the diamond itself is the
+   pointer and never covers the spot you're aiming for), then click **From pins** — the app infers the canvas's proportions
    from the pinned quad so artwork keeps its true shape (squares stay square)
    even on a canvas shaped differently from the screen. The inference assumes
    the projector faces the canvas roughly square-on; for exactness, type the

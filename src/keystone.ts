@@ -172,6 +172,10 @@ function beginCornerDrag(e: PointerEvent, i: number): void {
   const startX = e.clientX;
   const startY = e.clientY;
   const orig = { ...ks.offsets[i] };
+  // Hide the OS cursor for the duration of the drag so the diamond handle
+  // itself reads as the pointer — the cursor otherwise covers the corner and
+  // makes precise placement on the canvas hard.
+  document.body.classList.add('corner-dragging');
   // Delta-based drag: the handle's displayed position is clamped into the
   // window, so the corner moves by the pointer's movement rather than
   // jumping to the pointer's absolute position.
@@ -185,6 +189,7 @@ function beginCornerDrag(e: PointerEvent, i: number): void {
     mutate();
   };
   const onUp = () => {
+    document.body.classList.remove('corner-dragging');
     window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);
   };
