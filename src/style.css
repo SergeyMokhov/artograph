@@ -217,7 +217,7 @@ body:not(.editing) #ui {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   margin: 9px 0;
 }
 
@@ -256,21 +256,34 @@ body:not(.editing) #ui {
 .stretch {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 3px;
 }
 
 .stretch label {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
 }
 
 .stretch input[type='number'] {
-  width: 46px;
+  width: 38px;
+}
+
+/* Hide the native spinner arrows on the stretch fields — they add width and
+   render inconsistently across browsers. Type a value or use ⟲ to reset. */
+.stretch input[type='number'] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.stretch input[type='number']::-webkit-inner-spin-button,
+.stretch input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 #btn-stretch-reset {
-  padding: 4px 8px;
+  padding: 4px 6px;
 }
 
 .center-controls,
@@ -278,10 +291,17 @@ body:not(.editing) #ui {
   display: inline-flex;
   gap: 6px;
   align-items: center;
+  /* Allow the group to shrink within its row so a wide control (the select)
+     never forces the row past the panel width. */
+  min-width: 0;
 }
 
 #center-on {
   font: inherit;
+  /* Flex + min-width:0 so the select shrinks to the space left after the
+     Canvas button instead of overflowing the panel; the chevron stays put. */
+  flex: 1 1 auto;
+  min-width: 0;
   max-width: 130px;
   padding: 4px 6px;
   border: none;
@@ -344,6 +364,11 @@ button:hover {
   display: none;
 }
 
+/* Never show a horizontal scrollbar — rows are sized to fit the panel width. */
+#image-panel {
+  overflow-x: hidden;
+}
+
 #keystone-panel {
   right: 12px;
 }
@@ -351,6 +376,20 @@ button:hover {
 .panel h3 {
   margin: 0 0 6px;
   font-size: 15px;
+}
+
+/* The Image panel's title bar is a drag handle — grab it to move the panel. */
+#image-panel h3 {
+  cursor: move;
+  user-select: none;
+  touch-action: none;
+}
+
+#image-panel h3::after {
+  content: '⠿';
+  float: right;
+  color: #888;
+  font-size: 14px;
 }
 
 #keystone-panel .hint {

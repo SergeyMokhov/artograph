@@ -21,6 +21,24 @@ function layerFromEl(el: Element | null): Layer | undefined {
   return app.project?.layers.find((l) => l.id === id);
 }
 
+/**
+ * Every layer under the pointer, topmost first — using the browser's own hit
+ * testing so it respects each layer's transform. Lets a click reach an image
+ * stacked directly beneath another (e.g. the same image imported twice).
+ */
+function layersAt(e: PointerEvent): Layer[] {
+  const seen = new Set<string>();
+  const out: Layer[] = [];
+  for (const el of document.elementsFromPoint(e.clientX, e.clientY)) {
+    const id = (el as HTMLElement).closest<HTMLElement>('.layer')?.dataset.id;
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const layer = app.project?.layers.find((l) => l.id === id);
+    if (layer) out.push(layer);
+  }
+  return out;
+}
+
 function onPointerDown(e: PointerEvent): void {
   if (!app.project || e.button !== 0) return;
   const target = e.target as HTMLElement;
@@ -34,7 +52,17 @@ function onPointerDown(e: PointerEvent): void {
   }
 
   const handle = target.closest<HTMLElement>('[data-handle]')?.dataset.handle;
-  const layer = layerFromEl(target);
+
+  // Selection target: normally the topmost layer under the pointer. Alt-click
+  // cycles to the next layer below the current selection (wrapping around), so
+  // an image stacked directly beneath another — e.g. the same image imported
+  // twice — can still be reached.
+  const stack = layersAt(e);
+  let layer: Layer | undefined = stack[0];
+  if (e.altKey && stack.length > 1) {
+    const i = stack.findIndex((l) => l.id === app.selectedId);
+    layer = stack[(i + 1) % stack.length];
+  }
 
   if (handle && app.selectedId !== null) {
     const sel = selectedLayer();

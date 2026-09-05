@@ -162,7 +162,11 @@ async function imageDimensions(blob: Blob): Promise<{ w: number; h: number }> {
 export async function addImageFiles(files: Iterable<File>, at?: Pt): Promise<void> {
   const project = app.project;
   if (!project) return;
-  let pt = at ?? screenToStage({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+  // Without an explicit drop point, cascade around the viewport center based on
+  // how many layers already exist, so a re-imported (identical) image doesn't
+  // land exactly on top of the previous one and become unselectable.
+  const step = (project.layers.length % 6) * 34;
+  let pt = at ?? screenToStage({ x: window.innerWidth / 2 - 85 + step, y: window.innerHeight / 2 - 85 + step });
   for (const file of files) {
     if (!file.type.startsWith('image/')) continue;
     const imageId = await saveImageBlob(file);
