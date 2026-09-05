@@ -3,7 +3,7 @@ import { DEMO_ID, createDemoProject, ensureDemoProject } from './demo';
 import { exportProject, importProject } from './export';
 import { initInteractions } from './interactions';
 import { applyKeystone, initKeystone, toggleCalibrate } from './keystone';
-import { addImageFiles, deleteSelected, releaseImageURLs, renderStage, reorderSelected, selectedLayer, toggleInvertSelected, toggleLockSelected, toggleOutlineSelected } from './stage';
+import { addImageFiles, centerSelectedOnCanvas, centerSelectedOnLayer, deleteSelected, releaseImageURLs, renderStage, reorderSelected, resetStretch, selectedLayer, setLayerZ, setStretch, toggleInvertSelected, toggleLockSelected, toggleOutlineSelected } from './stage';
 import { app, mutate, subscribe } from './state';
 import { deleteProject, listProjects, saveProject } from './store';
 import { errMsg, toast } from './toast';
@@ -128,14 +128,27 @@ function openProject(doc: ProjectDoc): void {
 // ---------------------------------------------------------------------------
 // Toolbar
 
+const activeEl = () => document.activeElement;
+
 function updateToolbar(): void {
   $('#project-name').textContent = app.project?.name ?? '';
   const sel = selectedLayer();
-  $('#sel-controls').hidden = !sel;
+  $('#image-panel').hidden = !sel;
   if (sel) {
     $<HTMLInputElement>('#sel-opacity').value = String(sel.opacity);
+
+    // Layer number, and the stretch fields — don't fight the user mid-type.
+    const zEl = $<HTMLInputElement>('#sel-z');
+    if (activeEl() !== zEl) zEl.value = String(sel.z);
+    const sxEl = $<HTMLInputElement>('#sel-stretchX');
+    if (activeEl() !== sxEl) sxEl.value = String(sel.stretchX ?? 1);
+    const syEl = $<HTMLInputElement>('#sel-stretchY');
+    if (activeEl() !== syEl) syEl.value = String(sel.stretchY ?? 1);
+
+    populateCenterTargets(sel.id);
+
     const lockBtn = $<HTMLButtonElement>('#btn-lock');
-    lockBtn.textContent = sel.locked ? '🔒' : '🔓';
+    lockBtn.textContent = sel.locked ? '🔒 Frozen' : '🔓 Freeze';
     lockBtn.title = sel.locked ? 'Unfreeze image (L)' : 'Freeze image in place (L)';
     lockBtn.classList.toggle('active', sel.locked === true);
     $<HTMLButtonElement>('#btn-invert').classList.toggle('active', sel.invert === true);
@@ -149,6 +162,23 @@ function updateToolbar(): void {
       $<HTMLInputElement>('#ol-color').value = sel.outline.color;
     }
   }
+}
+
+/** Rebuild the "center on another image" dropdown from the other layers. */
+function populateCenterTargets(selfId: string): void {
+  const sel = $<HTMLSelectElement>('#center-on');
+  if (activeEl() === sel) return; // don't disturb an open dropdown
+  const others = (app.project?.layers ?? [])
+    .filter((l) => l.id !== selfId)
+    .sort((a, b) => b.z - a.z);
+  const opts = ['<option value="">On image…</option>'];
+  for (const l of others) {
+    const idx = (app.project?.layers.indexOf(l) ?? 0) + 1;
+    opts.push(`<option value="${l.id}">Image ${idx} (layer ${l.z})</option>`);
+  }
+  sel.innerHTML = opts.join('');
+  sel.value = '';
+  sel.disabled = others.length === 0;
 }
 
 function initToolbar(): void {
@@ -223,6 +253,24 @@ function initToolbar(): void {
   $('#btn-del').addEventListener('click', deleteSelected);
   $('#btn-front').addEventListener('click', () => reorderSelected(1));
   $('#btn-back').addEventListener('click', () => reorderSelected(-1));
+
+  // Layer number: type a value directly (negatives allowed, empty → 0).
+  const zEl = $<HTMLInputElement>('#sel-z');
+  const commitZ = () => setLayerZ(parseInt(zEl.value, 10) || 0);
+  zEl.addEventListener('change', commitZ);
+  zEl.addEventListener('keydown', (e) => {
+    if ((e as KeyboardEvent).key === 'Enter') zEl.blur();
+  });
+
+  $<HTMLInputElement>('#sel-stretchX').addEventListener('input', (e) => setStretch('x', parseFloat((e.target as HTMLInputElement).value)));
+  $<HTMLInputElement>('#sel-stretchY').addEventListener('input', (e) => setStretch('y', parseFloat((e.target as HTMLInputElement).value)));
+  $('#btn-stretch-reset').addEventListener('click', resetStretch);
+
+  $('#btn-center').addEventListener('click', centerSelectedOnCanvas);
+  $<HTMLSelectElement>('#center-on').addEventListener('change', (e) => {
+    const id = (e.target as HTMLSelectElement).value;
+    if (id) centerSelectedOnLayer(id);
+  });
 }
 
 // ---------------------------------------------------------------------------

@@ -11,8 +11,15 @@ export interface Layer {
   x: number;
   y: number;
   scale: number;
+  /**
+   * Non-uniform stretch applied on top of `scale`, so an image can be pulled
+   * out of square (wider than tall or vice versa). Default 1 = no stretch.
+   */
+  stretchX: number;
+  stretchY: number;
   /** Degrees. */
   rotation: number;
+  /** Stacking order / layer number. Higher is in front; may be negative. */
   z: number;
   /** 0..1 */
   opacity: number;

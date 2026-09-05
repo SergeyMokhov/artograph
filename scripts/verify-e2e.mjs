@@ -185,6 +185,66 @@ step(
   `filter on="${fOn}" btn active=${invBtnActive}, off="${fOff || '(none)'}"`,
 );
 
+// ---- 2b. Per-image panel: layer number, stretch, center -------------------
+const panelShown = await page.$eval('#image-panel', (el) => !el.hidden);
+step(panelShown, 'image panel shows for the selected image', `#image-panel visible=${panelShown}`);
+
+const setField = (id, value, evt) =>
+  page.evaluate((id, value, evt) => {
+    const el = document.getElementById(id);
+    el.value = value;
+    el.dispatchEvent(new Event(evt, { bubbles: true }));
+  }, id, value, evt);
+
+// Layer number: type a negative value; it must land on the layer's z-index.
+const origZ = await page.$eval('.layer', (el) => el.style.zIndex);
+await setField('sel-z', '-3', 'change');
+await sleep(60);
+const negZ = await page.$eval('.layer', (el) => el.style.zIndex);
+step(negZ === '-3', 'layer number accepts a negative value', `z ${origZ} -> ${negZ}`);
+await setField('sel-z', origZ, 'change');
+
+// Stretch X: pull the image wider; rendered width grows, height unchanged.
+const preStretch = await page.$eval('.layer', (el) => el.getBoundingClientRect().toJSON());
+await setField('sel-stretchX', '2', 'input');
+await sleep(60);
+const wideRect = await page.$eval('.layer', (el) => el.getBoundingClientRect().toJSON());
+const grewWide = wideRect.width > preStretch.width * 1.7 && Math.abs(wideRect.height - preStretch.height) < 3;
+step(grewWide, 'stretch X pulls the image out of square', `w ${preStretch.width | 0}->${wideRect.width | 0}, h ${preStretch.height | 0}->${wideRect.height | 0}`);
+await page.click('#btn-stretch-reset');
+await sleep(60);
+const resetRect = await page.$eval('.layer', (el) => el.getBoundingClientRect().toJSON());
+step(Math.abs(resetRect.width - preStretch.width) < 3, 'stretch reset returns to square', `w back to ${resetRect.width | 0} (was ${preStretch.width | 0})`);
+
+// Center on canvas: nudge the layer away, then center it on the viewport.
+const beforeCenter = await page.$eval('.layer', (el) => el.getBoundingClientRect().toJSON());
+// move it well off-center first
+await page.mouse.move(beforeCenter.x + beforeCenter.width / 2, beforeCenter.y + beforeCenter.height / 2);
+await page.mouse.down();
+await page.mouse.move(beforeCenter.x + beforeCenter.width / 2 - 250, beforeCenter.y + beforeCenter.height / 2 - 150, { steps: 6 });
+await page.mouse.up();
+await page.click('#btn-center');
+await sleep(60);
+const centered = await page.$eval('.layer', (el) => el.getBoundingClientRect().toJSON());
+const cc = { x: centered.x + centered.width / 2, y: centered.y + centered.height / 2 };
+const isCentered = Math.abs(cc.x - 1280 / 2) < 4 && Math.abs(cc.y - 800 / 2) < 4;
+step(isCentered, 'center on canvas re-centers the image', `layer center at (${cc.x | 0},${cc.y | 0}), expected (640,400)`);
+
+// Corner-drag hides the OS cursor so the diamond acts as the pointer.
+await page.click('#btn-tilt');
+await page.waitForSelector('#corners .corner');
+const firstCorner = await page.$eval('#corners .corner', (el) => el.getBoundingClientRect().toJSON());
+const cp = { x: firstCorner.x + firstCorner.width / 2, y: firstCorner.y + firstCorner.height / 2 };
+await page.mouse.move(cp.x, cp.y);
+await page.mouse.down();
+await page.mouse.move(cp.x + 20, cp.y + 20, { steps: 3 });
+const cursorHidden = await page.evaluate(() => document.body.classList.contains('corner-dragging') && getComputedStyle(document.body).cursor === 'none');
+await page.mouse.up();
+const cursorRestored = await page.evaluate(() => !document.body.classList.contains('corner-dragging'));
+step(cursorHidden && cursorRestored, 'corner drag hides the cursor (diamond becomes the pointer)', `hidden during=${cursorHidden}, restored after=${cursorRestored}`);
+await page.click('#ks-reset'); // clear the offset this drag introduced
+await page.click('#btn-tilt'); // close tilt panel; the next section reopens it
+
 // ---- 3. Tilt: sliders and corner drags warp the stage --------------------
 await page.click('#btn-tilt');
 await page.waitForSelector('#keystone-panel:not([hidden])');
@@ -258,7 +318,7 @@ await page.mouse.up();
 const afterDragRect = await page.$eval('.layer', (el) => el.getBoundingClientRect().toJSON());
 const stayedPut = lockedRect.x === afterDragRect.x && lockedRect.y === afterDragRect.y;
 const lockIcon = await page.$eval('#btn-lock', (el) => el.textContent);
-step(stayedPut && lockIcon === '🔒', 'freeze image in place (L) blocks dragging', `drag attempt moved it ${afterDragRect.x - lockedRect.x},${afterDragRect.y - lockedRect.y}px; lock button shows ${lockIcon}`);
+step(stayedPut && lockIcon.includes('🔒'), 'freeze image in place (L) blocks dragging', `drag attempt moved it ${afterDragRect.x - lockedRect.x},${afterDragRect.y - lockedRect.y}px; lock button shows ${lockIcon}`);
 await page.keyboard.press('l'); // unfreeze for the rest of the run
 await sleep(100);
 
